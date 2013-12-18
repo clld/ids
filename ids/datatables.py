@@ -3,6 +3,8 @@ from clld.web.datatables.base import Col, LinkCol, IntegerIdCol, DataTable, Link
 from clld.web.datatables.contribution import Contributions, CitationCol, ContributorsCol
 from clld.web.datatables import contributor
 from clld.web.datatables.parameter import Parameters
+from clld.web.util.helpers import link
+from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
 from clld.db.models.common import Language, Parameter, Value
 
@@ -49,6 +51,7 @@ class Counterparts(Values):
                 LinkToMapCol(self, 'm', get_object=lambda i: i.valueset.language),
                 LinkCol(self, 'language', model_col=Language.name, get_object=lambda i: i.valueset.language),
                 LinkCol(self, 'counterparts', model_col=Value.name),
+                Col(self, 'description'),
             ]
 
         return [
@@ -56,11 +59,27 @@ class Counterparts(Values):
             LinkCol(self, 'meaning', model_col=Parameter.name, get_object=lambda i: i.valueset.parameter),
             ChapterCol(self, 'chapter', get_object=lambda i: i.valueset.parameter),
             LinkCol(self, 'counterparts', model_col=Value.name),
+            Col(self, 'description'),
         ]
 
 
+class ContributionsCol(Col):
+    __kw__ = {'bSearchable': False, 'bSortable': False}
+
+    def format(self, item):
+        return HTML.ul(
+            *[HTML.li(
+                link(self.dt.req, c.contribution),
+                HTML.span(' (%s)' % c.jsondatadict['role'])
+            ) for c in item.contribution_assocs])
+
+
 class Compilers(contributor.Contributors):
-    pass
+    def col_defs(self):
+        return [
+            LinkCol(self, 'name'),
+            ContributionsCol(self, 'contributions'),
+        ]
 
 
 class Dictionaries(Contributions):
@@ -106,7 +125,7 @@ class Chapters(DataTable):
 def includeme(config):
     config.register_datatable('values', Counterparts)
     #config.register_datatable('languages', WoldLanguages)
-    #config.register_datatable('contributors', Authors)
+    config.register_datatable('contributors', Compilers)
     #config.register_datatable('contributions', Vocabularies)
     config.register_datatable('parameters', Entries)
     config.register_datatable('chapters', Chapters)

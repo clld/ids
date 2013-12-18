@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 import sys
+import re
 
 from sqlalchemy import create_engine
 from clld.scripts.util import initializedb, Data
@@ -167,9 +168,17 @@ def main(args):
 
     # valueset
     # value ids
+    data_desc = {}
+    for l in read('x_lg_data'):
+        if l.lg_id in data_desc:
+            data_desc[l.lg_id][l.map_ids_data] = l.header
+        else:
+            data_desc[l.lg_id] = {l.map_ids_data: l.header}
+
     missing = {}
+    empty = re.compile('(NULL|[\s\-]*)$')
     for l in read('ids'):
-        if l.data_1 == "- -" or not l.data_1.strip():
+        if empty.match(l.data_1):
             continue
         #entry_id	chap_id	lg_id	data_1	data_2
         entry_id = '%s-%s' % (l.chap_id, l.entry_id)
@@ -179,21 +188,29 @@ def main(args):
             else:
                 missing[entry_id] = 1
             continue
+
         id_ = '%s-%s' % (entry_id, l.lg_id)
         vs = data.add(
             common.ValueSet, id_,
             id=id_,
-            #name=l.data_1,
+            jsondata=dict(comment=l.comment if l.comment != 'NULL' else None),
             language=data['Language'][l.lg_id],
             contribution=data['Dictionary'][l.lg_id],
             parameter=data['Entry'][entry_id])
+        desc = data_desc.get(l.lg_id, {})
         data.add(
-            common.Value, id_,
-            id=id_,
+            common.Value, id_ + '-1',
+            id=id_ + '-1',
             name=l.data_1,
-            description=l.data_2 if l.data_2 != 'NULL' else None,
-            jsondata=dict(comment=l.comment if l.comment != 'NULL' else None),
+            description=desc.get('1'),
             valueset=vs)
+        if not empty.match(l.data_2):
+            data.add(
+                common.Value, id_ + '-2',
+                id=id_ + '-2',
+                name=l.data_2,
+                description=desc.get('2'),
+                valueset=vs)
 
     print missing
     print len(missing)

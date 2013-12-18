@@ -20,6 +20,9 @@ def link_attrs(req, obj, **kw):
     if interfaces.ILanguage.providedBy(obj):
         # we are about to link to a language details page: redirect to contribution page!
         kw['href'] = req.route_url('contribution', id=obj.id, **kw.pop('url_kw', {}))
+    if interfaces.IValue.providedBy(obj):
+        # we are about to link to a value details page: redirect to valueset page!
+        kw['href'] = req.resource_url(obj.valueset, **kw.pop('url_kw', {}))
     return kw
 
 
