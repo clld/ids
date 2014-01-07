@@ -5,7 +5,6 @@ import codecs
 from itertools import groupby
 from collections import defaultdict
 
-import transaction
 from sqlalchemy import create_engine
 from clld.scripts.util import initializedb, Data
 from clld.db.meta import DBSession
@@ -25,6 +24,13 @@ for row in GC.execute('select ll.hid, l.id, l.latitude, l.longitude from languag
         glottocodes[row[0]] = (row[1], row[2], row[3])
 
 
+def split_counterparts(c):
+    for word in re.split('\s*(?:\,|\;)\s*', c):
+        word = word.strip()
+        if word:
+            yield word
+
+
 def main(args):
     data = Data()
 
@@ -41,7 +47,9 @@ def main(args):
         contact='ids@eva.mpg.de',
         jsondata={
             'license_icon': 'http://i.creativecommons.org/l/by-nc-nd/2.0/de/88x31.png',
-            'license_name': 'Creative Commons Attribution-NonCommercial-NoDerivs 2.0 Germany License'},
+            'license_name':
+                'Creative Commons Attribution-NonCommercial-NoDerivs 2.0 Germany License',
+        },
         domain='ids.clld.org')
 
     DBSession.add(dataset)
@@ -201,7 +209,7 @@ def main(args):
                 contribution=data['Dictionary'][l.lg_id],
                 parameter=data['Entry'][entry_id])
 
-            trans1 = re.split('\s*(?:\,|\;)\s*', l.data_1)
+            trans1 = split_counterparts(l.data_1)
             trans2 = None #if empty.match(l.data_2) else re.split('\s*(?:\,|\;)\s*', l.data_2)
 
             #if trans2:
