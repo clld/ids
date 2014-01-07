@@ -15,7 +15,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
-    Parameter, IdNameDescriptionMixin, Contribution, Language,
+    Parameter, IdNameDescriptionMixin, Contribution, Language, Value, Unit,
 )
 
 
@@ -44,3 +44,22 @@ class Dictionary(Contribution, CustomModelMixin):
     pk = Column(Integer, ForeignKey('contribution.pk'), primary_key=True)
     language_pk = Column(Integer, ForeignKey('language.pk'), nullable=False)
     language = relationship(Language, backref=backref('dictionary', uselist=False))
+
+
+@implementer(interfaces.IUnit)
+class Word(Unit, CustomModelMixin):
+    pk = Column(Integer, ForeignKey('unit.pk'), primary_key=True)
+
+    alt_name = Column(Unicode)
+    alt_description = Column(Unicode)
+
+
+@implementer(interfaces.IValue)
+class Counterpart(Value, CustomModelMixin):
+    """
+    a counterpart relates a meaning with a word
+    """
+    pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
+
+    word_pk = Column(Integer, ForeignKey('unit.pk'))
+    word = relationship(Word, backref='counterparts')

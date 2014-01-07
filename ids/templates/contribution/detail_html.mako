@@ -17,9 +17,11 @@
         ${h.format_coordinates(ctx.language)}
     </%util:well>
     % endif
+    % if ctx.language.sources:
     <%util:well title="Sources">
         ${util.sources_list(sorted(list(ctx.language.sources), key=lambda s: s.name))}
     </%util:well>
+    % endif
 </%def>
 
 <h2>${ctx.name} Dictionary</h2>

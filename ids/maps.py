@@ -3,7 +3,7 @@ from clld.web.maps import ParameterMap, LanguageMap
 
 class MeaningMap(ParameterMap):
     def get_options(self):
-        return {'show_labels': True}
+        return {'show_labels': True, 'max_zoom': 10, 'icon_size': 20}
 
 
 class ContributionMap(LanguageMap):
@@ -11,6 +11,9 @@ class ContributionMap(LanguageMap):
     """
     def __init__(self, ctx, req, eid='map'):
         super(ContributionMap, self).__init__(ctx.language, req, eid=eid)
+
+    def get_options(self):
+        return {'max_zoom': 10, 'icon_size': 20}
 
 
 def includeme(config):

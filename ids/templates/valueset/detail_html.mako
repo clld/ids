@@ -3,11 +3,11 @@
 <%! active_menu_item = "contributions" %>
 
 
-<h2>Counterparts in ${h.link(request, ctx.language)} for meaning "${h.link(request, ctx.parameter)}"</h2>
+<h2>Words in ${h.link(request, ctx.language)} for meaning "${h.link(request, ctx.parameter)}"</h2>
 
 <ul class="unstyled">
 % for i, value in enumerate(ctx.values):
-    <li>${value.name} (${value.description})</li>
+    <li>${h.link(request, value.word)}</li>
 % endfor
 </ul>
 % if ctx.jsondatadict['comment']:

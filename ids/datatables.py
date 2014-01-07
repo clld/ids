@@ -1,3 +1,6 @@
+from sqlalchemy import Integer
+from sqlalchemy.sql.expression import cast
+
 from clld.web.datatables import Values
 from clld.web.datatables.base import Col, LinkCol, IntegerIdCol, DataTable, LinkToMapCol
 from clld.web.datatables.contribution import Contributions, CitationCol, ContributorsCol
@@ -20,7 +23,7 @@ class IDSCodeCol(Col):
         return self.get_obj(item).id.replace('-', '.')
 
     def order(self):
-        return Entry.chapter_pk, Entry.sub_code
+        return Entry.chapter_pk, cast(Entry.sub_code, Integer)
 
     def search(self, qs):
         return Entry.id.contains(qs.replace('.', '-'))

@@ -1,7 +1,11 @@
 from __future__ import unicode_literals
 import sys
 import re
+import codecs
+from itertools import groupby
+from collections import defaultdict
 
+import transaction
 from sqlalchemy import create_engine
 from clld.scripts.util import initializedb, Data
 from clld.db.meta import DBSession
@@ -39,10 +43,6 @@ def main(args):
             'license_icon': 'http://i.creativecommons.org/l/by-nc-nd/2.0/de/88x31.png',
             'license_name': 'Creative Commons Attribution-NonCommercial-NoDerivs 2.0 Germany License'},
         domain='ids.clld.org')
-    #
-    # TODO: license! editors!
-    #
-    #http://creativecommons.org/licenses/by-nc-nd/2.0/de/deed.en
 
     DBSession.add(dataset)
 
@@ -177,48 +177,84 @@ def main(args):
 
     missing = {}
     empty = re.compile('(NULL|[\s\-]*)$')
-    for l in read('ids'):
-        if empty.match(l.data_1):
-            continue
-        #entry_id	chap_id	lg_id	data_1	data_2
-        entry_id = '%s-%s' % (l.chap_id, l.entry_id)
-        if entry_id not in data['Entry']:
-            if entry_id in missing:
-                missing[entry_id] += 1
-            else:
-                missing[entry_id] = 1
-            continue
-
-        id_ = '%s-%s' % (entry_id, l.lg_id)
-        vs = data.add(
-            common.ValueSet, id_,
-            id=id_,
-            jsondata=dict(comment=l.comment if l.comment != 'NULL' else None),
-            language=data['Language'][l.lg_id],
-            contribution=data['Dictionary'][l.lg_id],
-            parameter=data['Entry'][entry_id])
+    for lg_id, entries in groupby(sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
+        language = data['Language'][lg_id]
         desc = data_desc.get(l.lg_id, {})
-        data.add(
-            common.Value, id_ + '-1',
-            id=id_ + '-1',
-            name=l.data_1,
-            description=desc.get('1'),
-            valueset=vs)
-        if not empty.match(l.data_2):
-            data.add(
-                common.Value, id_ + '-2',
-                id=id_ + '-2',
-                name=l.data_2,
-                description=desc.get('2'),
-                valueset=vs)
+        words = defaultdict(list)
+        for l in entries:
+            if empty.match(l.data_1):
+                continue
+            #entry_id	chap_id	lg_id	data_1	data_2
+            entry_id = '%s-%s' % (l.chap_id, l.entry_id)
+            if entry_id not in data['Entry']:
+                if entry_id in missing:
+                    missing[entry_id].append((language.name, l.data_1))
+                else:
+                    missing[entry_id] = [(language.name, l.data_1)]
+                continue
 
-    print missing
-    print len(missing)
-    print sum(missing.values())
+            id_ = '%s-%s' % (entry_id, l.lg_id)
+            vs = common.ValueSet(
+                id=id_,
+                jsondata=dict(comment=l.comment if l.comment != 'NULL' else None),
+                language=language,
+                contribution=data['Dictionary'][l.lg_id],
+                parameter=data['Entry'][entry_id])
+
+            trans1 = re.split('\s*(?:\,|\;)\s*', l.data_1)
+            trans2 = None #if empty.match(l.data_2) else re.split('\s*(?:\,|\;)\s*', l.data_2)
+
+            #if trans2:
+            #    if len(trans2) != len(trans1):
+            #        if language.id != '238':
+            #            print language.id, language.name
+            #            print l.data_1
+            #            print l.data_2
+            #        #assert language.id == '238'  # Rapa Nui has problems!
+            #        trans2 = None
+
+            for i, word in enumerate(trans1):
+                v = models.Counterpart(
+                    id=id_ + '-' + str(i + 1),
+                    name=word,
+                    #description=desc.get('1'),
+                    valueset=vs)
+                words[word].append((v, trans2[i] if trans2 else None))
+
+        for i, form in enumerate(words.keys()):
+            # make sure the word has the same alternative transcription for all meanings:
+            #if language.id == '238':
+            #    alt_names = []
+            #else:
+            #    alt_names = set((w[1] or '').replace('-', '') for w in words[word])
+            #alt_names = filter(None, list(alt_names))
+            #try:
+            #    assert len(alt_names) <= 1
+            #except AssertionError:
+            #    print language.id, language.name
+            #    print alt_names
+            word = models.Word(
+                id='%s-%s' % (language.id, i + 1),
+                name=form,
+                description=desc.get('1'),
+                language=language,
+                #alt_name=alt_names[0] if alt_names else None,
+                #alt_description=desc.get('2')
+            )
+            for v, _ in words[form]:
+                word.counterparts.append(v)
+            DBSession.add(word)
+
+        DBSession.flush()
+
+    with codecs.open(args.data_file('missing.tsv'), 'w', encoding='utf8') as fp:
+        for id_, items in missing.items():
+            for l, c in items:
+                fp.write('%s\t%s\t%s\n' % (id_, l, c))
+
     # contributor lang_compilers/what_did
     # contribution
     # source
-
 
 
 def prime_cache(args):
@@ -226,6 +262,7 @@ def prime_cache(args):
     This procedure should be separate from the db initialization, because
     it will have to be run periodiucally whenever data has been updated.
     """
+    # identify words:
 
 
 if __name__ == '__main__':
