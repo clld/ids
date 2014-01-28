@@ -7,10 +7,28 @@
 
 <ul class="unstyled">
 % for i, value in enumerate(ctx.values):
-    <li>${h.link(request, value.word)}</li>
+    <li>
+        ${h.link(request, value.word, class_='charissil')}
+        % if ctx.description:
+        (${ctx.description})
+        % endif
+        ;
+        % if value.word.alt_name:
+        <span class="charissil">${value.word.alt_name}</span>
+        % if ctx.alt_description:
+        (${value.word.alt_description})
+        % endif
+        ;
+        % endif
+    </li>
 % endfor
 </ul>
+% if ctx.jsondatadict.get('alt_representation'):
+<h3>${ctx.jsondatadict['alt_representation'][0]} representation</h3>
+<p>${ctx.jsondatadict['alt_representation'][1]}</p>
+% endif
 % if ctx.jsondatadict['comment']:
+<h3>Comment</h3>
 <p>${ctx.jsondatadict['comment']}</p>
 % endif
 <%def name="sidebar()">

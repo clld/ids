@@ -5,8 +5,9 @@ import codecs
 from itertools import groupby
 from collections import defaultdict
 
-from sqlalchemy import create_engine
-from clld.scripts.util import initializedb, Data
+from clld.scripts.util import (
+    initializedb, Data, glottocodes_by_isocode, add_language_codes,
+)
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib import dsv
@@ -14,14 +15,6 @@ from clld.util import slug
 
 import ids
 from ids import models
-
-
-GC = create_engine('postgresql://robert@/glottolog3')
-
-glottocodes = {}
-for row in GC.execute('select ll.hid, l.id, l.latitude, l.longitude from language as l, languoid as ll where ll.pk = l.pk'):
-    if row[0] and len(row[0]) == 3:
-        glottocodes[row[0]] = (row[1], row[2], row[3])
 
 
 def split_counterparts(c):
@@ -32,9 +25,14 @@ def split_counterparts(c):
 
 
 def main(args):
+    glottocodes = glottocodes_by_isocode(
+        'postgresql://robert@/glottolog3', cols='id latitude longitude'.split())
     data = Data()
 
     def read(table):
+        f = args.data_file(table + '.csv')
+        if f.exists():
+            return list(dsv.namedtuples_from_csv(open(f)))
         return list(dsv.rows(
             args.data_file(table + '.tsv'), namedtuples=True, encoding='utf8'))
 
@@ -65,12 +63,12 @@ def main(args):
 
     ROLES = {
         '1': 'Data Entry',
-        '2': 'Compiler',
+        '2': 'Editor',
         '3': 'Consultant',
     }
 
     contributors = {}
-    sources = {}
+    sources = defaultdict(list)
     for l in read('lang_compilers'):
         if l.name == "BIBIKO":
             continue
@@ -82,10 +80,7 @@ def main(args):
             else:
                 contributors[s] = [(l.name, l.what_did_id, l.lg_id)]
         else:
-            if l.name in sources:
-                sources[l.name].append(l.lg_id)
-            else:
-                sources[l.name] = [l.lg_id]
+            sources[l.name].append(l.lg_id)
 
     for s, roles in contributors.items():
         name = roles[0][0]
@@ -93,6 +88,9 @@ def main(args):
         if name == 'Mary Ritchie Key':
             c.address = 'University of California, Irvine'
         for _, what, lg in roles:
+            if what == '1':
+                # we don't record data entry
+                continue
             DBSession.add(common.ContributionContributor(
                 contribution=data['Dictionary'][lg],
                 contributor=c,
@@ -108,7 +106,7 @@ def main(args):
     for i, editor in enumerate(['maryritchiekey', 'bernardcomrie']):
         common.Editor(dataset=dataset, contributor=data['Contributor'][editor], ord=i + 1)
 
-    for i, name in enumerate(sources):
+    for i, name in enumerate(sorted(sources.keys())):
         c = data.add(common.Source, name, id=str(i + 1), name=name, description=name)
 
     DBSession.flush()
@@ -187,7 +185,7 @@ def main(args):
     empty = re.compile('(NULL|[\s\-]*)$')
     for lg_id, entries in groupby(sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
         language = data['Language'][lg_id]
-        desc = data_desc.get(l.lg_id, {})
+        desc = data_desc.get(lg_id, {})
         words = defaultdict(list)
         for l in entries:
             if empty.match(l.data_1):
@@ -209,17 +207,21 @@ def main(args):
                 contribution=data['Dictionary'][l.lg_id],
                 parameter=data['Entry'][entry_id])
 
-            trans1 = split_counterparts(l.data_1)
-            trans2 = None #if empty.match(l.data_2) else re.split('\s*(?:\,|\;)\s*', l.data_2)
+            trans1 = list(split_counterparts(l.data_1))
+            trans2 = None  if empty.match(l.data_2) else list(split_counterparts(l.data_2))
 
-            #if trans2:
-            #    if len(trans2) != len(trans1):
-            #        if language.id != '238':
-            #            print language.id, language.name
-            #            print l.data_1
-            #            print l.data_2
-            #        #assert language.id == '238'  # Rapa Nui has problems!
-            #        trans2 = None
+            if trans2:
+                if len(trans2) != len(trans1):
+                    #if language.id != '238':
+                    #    print '===', language.id, language.name
+                    #    print l.data_1
+                    #    print l.data_2
+                    #assert language.id == '238'  # Rapa Nui has problems!
+                    #
+                    # TODO: simply store l.data_2 as data with the valueset!?
+                    #
+                    vs.update_jsondata(alt_representation=(desc.get('2'), l.data_2))
+                    trans2 = None
 
             for i, word in enumerate(trans1):
                 v = models.Counterpart(
@@ -231,23 +233,23 @@ def main(args):
 
         for i, form in enumerate(words.keys()):
             # make sure the word has the same alternative transcription for all meanings:
-            #if language.id == '238':
-            #    alt_names = []
-            #else:
-            #    alt_names = set((w[1] or '').replace('-', '') for w in words[word])
-            #alt_names = filter(None, list(alt_names))
-            #try:
-            #    assert len(alt_names) <= 1
-            #except AssertionError:
-            #    print language.id, language.name
-            #    print alt_names
+            if language.id == '238':
+                alt_names = []
+            else:
+                alt_names = set((w[1] or '').replace('-', '') for w in words[word])
+            alt_names = filter(None, list(alt_names))
+            try:
+                assert len(alt_names) <= 1
+            except AssertionError:
+                print '---', language.id, language.name
+                print alt_names
             word = models.Word(
                 id='%s-%s' % (language.id, i + 1),
                 name=form,
                 description=desc.get('1'),
                 language=language,
-                #alt_name=alt_names[0] if alt_names else None,
-                #alt_description=desc.get('2')
+                alt_name=alt_names[0] if alt_names else None,
+                alt_description=desc.get('2')
             )
             for v, _ in words[form]:
                 word.counterparts.append(v)

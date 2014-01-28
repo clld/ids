@@ -9,4 +9,8 @@
     </a>
 </%block>
 
+<%block name="head">
+    <link href="${request.static_url('clld:web/static/css/charissil.css')}" rel="stylesheet">
+</%block>
+
 ${next.body()}

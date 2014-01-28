@@ -61,7 +61,7 @@ class Counterparts(Values):
             IDSCodeCol(self, 'ids_code', model_col=Parameter.id, get_object=lambda i: i.valueset.parameter),
             LinkCol(self, 'meaning', model_col=Parameter.name, get_object=lambda i: i.valueset.parameter),
             ChapterCol(self, 'chapter', get_object=lambda i: i.valueset.parameter),
-            LinkCol(self, 'counterparts', model_col=Value.name),
+            LinkCol(self, 'counterparts', model_col=Value.name, sClass="charissil"),
             Col(self, 'description'),
         ]
 
@@ -73,7 +73,8 @@ class ContributionsCol(Col):
         return HTML.ul(
             *[HTML.li(
                 link(self.dt.req, c.contribution),
-                HTML.span(' (%s)' % c.jsondatadict['role'])
+                HTML.span(' (Consultant)')
+                if c.jsondatadict['role'] == 'Consultant' else ''
             ) for c in item.contribution_assocs])
 
 

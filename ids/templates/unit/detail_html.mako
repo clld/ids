@@ -3,7 +3,11 @@
 <%! active_menu_item = "contributions" %>
 
 
-<h2>Word "${ctx}"</h2>
+<h2>Word <span class="charissil">${ctx}</span></h2>
+
+% if ctx.alt_name:
+${u.dl_table(**{ctx.alt_description: ctx.alt_name})}
+% endif
 
 <h3>Meanings</h3>
 <ul class="unstyled">

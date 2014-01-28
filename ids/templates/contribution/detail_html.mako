@@ -26,4 +26,8 @@
 
 <h2>${ctx.name} Dictionary</h2>
 
+% if ctx.jsondatadict['status'] == '1':
+<div class="alert alert-info">in progress</div>
+% endif
+
 ${request.get_datatable('values', h.models.Value, contribution=ctx).render()}
