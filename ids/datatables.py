@@ -9,9 +9,11 @@ from clld.web.datatables.parameter import Parameters
 from clld.web.util.helpers import link
 from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, Parameter, Value
+from clld.db.models.common import (
+    Language, Parameter, Value, ContributionContributor, Contribution, Contributor,
+)
 
-from ids.models import Chapter, Entry
+from ids.models import Chapter, Entry, ROLES
 
 
 class IDSCodeCol(Col):
@@ -66,23 +68,22 @@ class Counterparts(Values):
         ]
 
 
-class ContributionsCol(Col):
-    __kw__ = {'bSearchable': False, 'bSortable': False}
+class RoleCol(Col):
+    __kw__ = {'choices': ROLES.items(), 'sClass': 'left'}
 
     def format(self, item):
-        return HTML.ul(
-            *[HTML.li(
-                link(self.dt.req, c.contribution),
-                HTML.span(' (Consultant)')
-                if c.jsondatadict['role'] == 'Consultant' else ''
-            ) for c in item.contribution_assocs])
+        return ROLES[item.ord]
 
 
 class Compilers(contributor.Contributors):
+    def base_query(self, query):
+        return DBSession.query(ContributionContributor).join(Contribution).join(Contributor)
+
     def col_defs(self):
         return [
-            LinkCol(self, 'name'),
-            ContributionsCol(self, 'contributions'),
+            LinkCol(self, 'name', get_object=lambda i: i.contributor, model_col=Contributor.name),
+            RoleCol(self, 'role', model_col=ContributionContributor.ord),
+            LinkCol(self, 'dictionary', get_object=lambda i: i.contribution, model_col=Contribution.name),
         ]
 
 

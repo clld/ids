@@ -53,7 +53,11 @@ def main(args):
     DBSession.add(dataset)
 
     # language lang
+    exclude = []
     for l in read('lang'):
+        if l.status == '1':
+            exclude.append(l.lg_id)
+            continue
         lang = data.add(common.Language, l.lg_id, id=l.lg_id, name=l.lg_name)
         data.add(
             models.Dictionary, l.lg_id,
@@ -61,25 +65,20 @@ def main(args):
             language=lang,
             jsondata=dict(status=l.status, date=l.date))
 
-    ROLES = {
-        '1': 'Data Entry',
-        '2': 'Editor',
-        '3': 'Consultant',
-    }
-
-    contributors = {}
+    contributors = defaultdict(list)
     sources = defaultdict(list)
     for l in read('lang_compilers'):
+        if l.lg_id in exclude:
+            continue
         if l.name == "BIBIKO":
             continue
         #name	lg_id	what_did_id
-        if l.what_did_id in ['1', '2', '3']:
-            s = slug(l.name)
-            if s in contributors:
-                contributors[s].append((l.name, l.what_did_id, l.lg_id))
-            else:
-                contributors[s] = [(l.name, l.what_did_id, l.lg_id)]
+        if int(l.what_did_id) in models.ROLES:
+            contributors[slug(l.name)].append((l.name, int(l.what_did_id), l.lg_id))
         else:
+            if int(l.what_did_id) not in [4, 395]:
+                print l.what_did_id
+                raise ValueError
             sources[l.name].append(l.lg_id)
 
     for s, roles in contributors.items():
@@ -88,14 +87,11 @@ def main(args):
         if name == 'Mary Ritchie Key':
             c.address = 'University of California, Irvine'
         for _, what, lg in roles:
-            if what == '1':
-                # we don't record data entry
-                continue
             DBSession.add(common.ContributionContributor(
                 contribution=data['Dictionary'][lg],
                 contributor=c,
-                jsondata=dict(role=ROLES[what]),
-                primary=what == '2'))
+                ord=what,
+                primary=what == 2))
 
     data.add(
         common.Contributor, 'bernardcomrie',
@@ -112,6 +108,8 @@ def main(args):
     DBSession.flush()
     for name, lgs in sources.items():
         for lg in lgs:
+            if lg in exclude:
+                continue
             try:
                 DBSession.add(common.LanguageSource(
                     language_pk=data['Language'][lg].pk,
@@ -138,12 +136,14 @@ def main(args):
                 common.Identifier, l.name,
                 id='name-%s' % i, type='name', name=l.name, description='IDS')
             altnames[l.name] = identifier
-        if l.name != data['Language'][l.lg_id].name:
+        if l.lg_id not in exclude and l.name != data['Language'][l.lg_id].name:
             DBSession.add(common.LanguageIdentifier(
                 identifier=identifier, language=data['Language'][l.lg_id]))
 
     # languageidentifier x_lg_sil
     for l in read('x_lg_sil'):
+        if l.lg_id in exclude:
+            continue
         identifier = data['Identifier'][l.sil_id]
         language = data['Language'][l.lg_id]
         DBSession.add(common.LanguageIdentifier(identifier=identifier, language=language))
@@ -176,14 +176,19 @@ def main(args):
     # value ids
     data_desc = {}
     for l in read('x_lg_data'):
+        if l.lg_id in exclude:
+            continue
         if l.lg_id in data_desc:
             data_desc[l.lg_id][l.map_ids_data] = l.header
         else:
             data_desc[l.lg_id] = {l.map_ids_data: l.header}
 
+    misaligned = []
     missing = {}
     empty = re.compile('(NULL|[\s\-]*)$')
     for lg_id, entries in groupby(sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
+        if lg_id in exclude:
+            continue
         language = data['Language'][lg_id]
         desc = data_desc.get(lg_id, {})
         words = defaultdict(list)
@@ -212,10 +217,11 @@ def main(args):
 
             if trans2:
                 if len(trans2) != len(trans1):
-                    #if language.id != '238':
-                    #    print '===', language.id, language.name
-                    #    print l.data_1
-                    #    print l.data_2
+                    if language.id != '238':
+                        misaligned.append((l.chap_id, l.entry_id, l.lg_id))
+                        print '===', language.id, language.name
+                        print l.data_1
+                        print l.data_2
                     #assert language.id == '238'  # Rapa Nui has problems!
                     #
                     # TODO: simply store l.data_2 as data with the valueset!?
@@ -256,6 +262,10 @@ def main(args):
             DBSession.add(word)
 
         DBSession.flush()
+
+    with open(args.data_file('misaligned.tsv'), 'w') as fp:
+        for m in misaligned:
+            fp.write('%s\t%s\t%s\n' % m)
 
     with codecs.open(args.data_file('missing.tsv'), 'w', encoding='utf8') as fp:
         for id_, items in missing.items():

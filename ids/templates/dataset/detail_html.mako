@@ -3,12 +3,10 @@
 
 
 <%def name="sidebar()">
-    <div class="well">
-        <h3>Sidebar</h3>
-        <p>
-            Content
-        </p>
-    </div>
+    <%util:well>
+        ${h.newline2br(h.text_citation(request, ctx))|n}
+        ${h.cite_button(request, ctx)}
+    </%util:well>
 </%def>
 
 <h2>${ctx.description}</h2>

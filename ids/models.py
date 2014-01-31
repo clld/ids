@@ -19,6 +19,13 @@ from clld.db.models.common import (
 )
 
 
+ROLES = {
+    1: 'Data Entry',
+    2: 'Author',
+    3: 'Consultant',
+}
+
+
 class Chapter(Base, IdNameDescriptionMixin):
     pass
 
