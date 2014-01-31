@@ -1,5 +1,6 @@
 from sqlalchemy import Integer
 from sqlalchemy.sql.expression import cast
+from sqlalchemy.orm import aliased, joinedload
 
 from clld.web.datatables import Values
 from clld.web.datatables.base import Col, LinkCol, IntegerIdCol, DataTable, LinkToMapCol
@@ -8,12 +9,13 @@ from clld.web.datatables import contributor
 from clld.web.datatables.parameter import Parameters
 from clld.web.util.helpers import link
 from clld.web.util.htmllib import HTML
+from clld.db.util import icontains
 from clld.db.meta import DBSession
 from clld.db.models.common import (
     Language, Parameter, Value, ContributionContributor, Contribution, Contributor,
 )
 
-from ids.models import Chapter, Entry, ROLES
+from ids.models import Chapter, Entry, ROLES, Dictionary
 
 
 class IDSCodeCol(Col):
@@ -55,7 +57,7 @@ class Counterparts(Values):
             return [
                 LinkToMapCol(self, 'm', get_object=lambda i: i.valueset.language),
                 LinkCol(self, 'language', model_col=Language.name, get_object=lambda i: i.valueset.language),
-                LinkCol(self, 'counterparts', model_col=Value.name),
+                LinkCol(self, 'counterparts', model_col=Value.name, sClass="charissil"),
                 Col(self, 'description'),
             ]
 
@@ -87,14 +89,42 @@ class Compilers(contributor.Contributors):
         ]
 
 
+class ContributorCol(Col):
+    __kw__ = {'bSortable': False, 'bSearchable': False}
+
+    def __init__(self, dt, name, roleid, **kw):
+        kw['sTitle'] = ROLES[roleid]
+        Col.__init__(self, dt, name, **kw)
+        self.roleid = roleid
+
+    def format(self, item):
+        return HTML.ul(
+            *[HTML.li(link(self.dt.req, ca.contributor))
+              for ca in item.contributor_assocs if ca.ord == self.roleid])
+
+
 class Dictionaries(Contributions):
+    def __init__(self, *args, **kw):
+        Contributions.__init__(self, *args, **kw)
+        self.roles = {}
+        for roleid in ROLES:
+            self.roles[roleid] = aliased(ContributionContributor, name='role%s' % roleid)
+
+    def base_query(self, query):
+        q = DBSession.query(Contribution).options(joinedload(Dictionary.language))
+        for roleid, alias in self.roles.items():
+            q.join(alias, alias.ord == roleid)
+        return q.distinct()
+
     def col_defs(self):
-        return [
+        res = [
             LinkCol(self, 'name'),
             LinkToMapCol(self, 'm', get_object=lambda i: i.language),
-            ContributorsCol(self, 'contributor'),
-            CitationCol(self, 'cite'),
         ]
+        for roleid in ROLES.keys():
+            res.append(ContributorCol(self, 'role%s' % roleid, roleid))
+        res.append(CitationCol(self, 'cite'))
+        return res
 
 
 class Entries(Parameters):
@@ -131,6 +161,6 @@ def includeme(config):
     config.register_datatable('values', Counterparts)
     #config.register_datatable('languages', WoldLanguages)
     config.register_datatable('contributors', Compilers)
-    #config.register_datatable('contributions', Vocabularies)
+    config.register_datatable('contributions', Dictionaries)
     config.register_datatable('parameters', Entries)
     config.register_datatable('chapters', Chapters)

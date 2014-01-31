@@ -1,5 +1,6 @@
 <%inherit file="../${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
 <%namespace name="util" file="../util.mako"/>
+<%! from ids.models import ROLES %>
 <%! active_menu_item = "contributions" %>
 
 <%def name="sidebar()">
@@ -7,8 +8,22 @@
     ${util.codes(ctx.language)}
     </div>
     <br clear="both" />
-    <%util:well title="Compiler">
-        ${h.linked_contributors(request, ctx)}
+    <%util:well>
+        <dl>
+        % for id, label in ROLES.items():
+            <% contribs = [ca.contributor for ca in ctx.contributor_assocs if ca.ord == id] %>
+            % if contribs:
+            <dt>${label}</dt>
+            <dd>
+                <ul${' class="unstyled"' if len(contribs) == 1 else ''|n}>
+                % for c in contribs:
+                    <li>${h.link(request, c)}</li>
+                % endfor
+                </ul>
+            </dd>
+            % endif
+        % endfor
+        </dl>
         ${h.cite_button(request, ctx)}
     </%util:well>
     % if ctx.language.latitude is not None:

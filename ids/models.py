@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from zope.interface import implementer
 from sqlalchemy import (
     Column,
@@ -19,11 +21,10 @@ from clld.db.models.common import (
 )
 
 
-ROLES = {
-    1: 'Data Entry',
-    2: 'Author',
-    3: 'Consultant',
-}
+ROLES = OrderedDict()
+ROLES[2] = 'Author'
+ROLES[3] = 'Consultant'
+ROLES[1] = 'Data Entry'
 
 
 class Chapter(Base, IdNameDescriptionMixin):

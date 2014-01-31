@@ -1,4 +1,4 @@
-from clld.web.maps import ParameterMap, LanguageMap
+from clld.web.maps import ParameterMap, LanguageMap, Map
 
 
 class MeaningMap(ParameterMap):
@@ -16,6 +16,12 @@ class ContributionMap(LanguageMap):
         return {'max_zoom': 10, 'icon_size': 20}
 
 
+class ContributionsMap(Map):
+    def get_options(self):
+        return {'max_zoom': 10, 'icon_size': 20}
+
+
 def includeme(config):
     config.register_map('parameter', MeaningMap)
     config.register_map('contribution', ContributionMap)
+    config.register_map('languages', ContributionsMap)

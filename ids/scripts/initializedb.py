@@ -233,7 +233,7 @@ def main(args):
                 v = models.Counterpart(
                     id=id_ + '-' + str(i + 1),
                     name=word,
-                    #description=desc.get('1'),
+                    description=desc.get('1'),
                     valueset=vs)
                 words[word].append((v, trans2[i] if trans2 else None))
 
