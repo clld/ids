@@ -5,9 +5,7 @@ import codecs
 from itertools import groupby
 from collections import defaultdict
 
-from clld.scripts.util import (
-    initializedb, Data, glottocodes_by_isocode, add_language_codes,
-)
+from clld.scripts.util import initializedb, Data, glottocodes_by_isocode
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib import dsv
@@ -18,7 +16,7 @@ from ids import models
 
 
 def split_counterparts(c):
-    for word in re.split('\s*(?:\,|\;)\s*', c):
+    for word in re.split('\s*(?:,|;)\s*', c):
         word = word.strip()
         if word:
             yield word
@@ -127,10 +125,17 @@ def main(args):
     for l in read('sil_lang'):
         data.add(
             common.Identifier, l.id,
-            id='iso-%s' % l.id, type=common.IdentifierType.iso.value, name=l.sil_code, description=l.sil_name)
+            id='iso-%s' % l.id,
+            type=common.IdentifierType.iso.value,
+            name=l.sil_code,
+            description=l.sil_name)
         if l.sil_code in glottocodes:
             gc = glottocodes[l.sil_code][0]
-            data.add(common.Identifier, gc, id=gc, type=common.IdentifierType.glottolog.value, name=gc)
+            data.add(
+                common.Identifier, gc,
+                id=gc,
+                type=common.IdentifierType.glottolog.value,
+                name=gc)
 
     altnames = {}
     for i, l in enumerate(read('alt_names')):
@@ -183,7 +188,8 @@ def main(args):
     misaligned = []
     missing = defaultdict(list)
     empty = re.compile('(NULL|[\s\-]*)$')
-    for lg_id, entries in groupby(sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
+    for lg_id, entries in groupby(
+            sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
         if lg_id in exclude:
             continue
         language = data['Language'][lg_id]
@@ -265,10 +271,6 @@ def main(args):
         for id_, items in missing.items():
             for l, c in items:
                 fp.write('%s\t%s\t%s\n' % (id_, l, c))
-
-    # contributor lang_compilers/what_did
-    # contribution
-    # source
 
 
 def prime_cache(args):

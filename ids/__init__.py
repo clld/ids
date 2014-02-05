@@ -1,7 +1,6 @@
 from functools import partial
 
 from clld.web.app import get_configurator, menu_item
-from clld.web.adapters.base import Index, adapter_factory
 from clld import interfaces
 
 # we must make sure custom models are known at database initialization!

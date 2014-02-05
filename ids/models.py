@@ -6,13 +6,9 @@ from sqlalchemy import (
     String,
     Unicode,
     Integer,
-    Boolean,
     ForeignKey,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.ext.hybrid import hybrid_property
 
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
@@ -67,8 +63,7 @@ class Word(Unit, CustomModelMixin):
 
 @implementer(interfaces.IValue)
 class Counterpart(Value, CustomModelMixin):
-    """
-    a counterpart relates a meaning with a word
+    """a counterpart relates a meaning with a word
     """
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
 

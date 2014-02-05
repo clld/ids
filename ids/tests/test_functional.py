@@ -38,4 +38,3 @@ class Tests(TestWithApp):
     def test_language(self):
         self.app.get('/languages/182.snippet.html', status=200)
         self.app.get('/languages/128.snippet.html?parameter=962', status=200)
-

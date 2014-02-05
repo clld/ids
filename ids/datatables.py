@@ -3,17 +3,14 @@ from sqlalchemy.sql.expression import cast
 from sqlalchemy.orm import aliased, joinedload
 
 from clld.web.datatables import Values
-from clld.web.datatables.base import Col, LinkCol, IntegerIdCol, DataTable, LinkToMapCol
-from clld.web.datatables.contribution import Contributions, CitationCol, ContributorsCol
+from clld.web.datatables.base import Col, LinkCol, LinkToMapCol
+from clld.web.datatables.contribution import Contributions, CitationCol
 from clld.web.datatables import contributor
 from clld.web.datatables.parameter import Parameters
 from clld.web.util.helpers import link
 from clld.web.util.htmllib import HTML
-from clld.db.util import icontains
 from clld.db.meta import DBSession
-from clld.db.models.common import (
-    Language, Parameter, Value, ContributionContributor, Contribution, Contributor,
-)
+import clld.db.models.common
 
 from ids.models import Chapter, Entry, ROLES, Dictionary
 
@@ -35,7 +32,8 @@ class IDSCodeCol(Col):
 
 class ChapterCol(Col):
     def __init__(self, *args, **kw):
-        kw['choices'] = [(sf.pk, sf.name) for sf in DBSession.query(Chapter).order_by(Chapter.pk)]
+        kw['choices'] = [
+            (sf.pk, sf.name) for sf in DBSession.query(Chapter).order_by(Chapter.pk)]
         super(ChapterCol, self).__init__(*args, **kw)
 
     def format(self, item):
@@ -54,20 +52,34 @@ class Counterparts(Values):
     """
     def col_defs(self):
         if self.parameter:
-            return [
-                LinkToMapCol(self, 'm', get_object=lambda i: i.valueset.language),
-                LinkCol(self, 'language', model_col=Language.name, get_object=lambda i: i.valueset.language),
-                LinkCol(self, 'counterparts', model_col=Value.name, sClass="charissil"),
-                Col(self, 'description'),
+            lang = lambda i: i.valueset.language
+            res = [
+                LinkToMapCol(self, 'm', get_object=lang),
+                LinkCol(
+                    self, 'language',
+                    model_col=clld.db.models.common.Language.name,
+                    get_object=lang),
             ]
-        param = lambda i: i.valueset.parameter
-        return [
-            IDSCodeCol(self, 'ids_code', model_col=Parameter.id, get_object=param),
-            LinkCol(self, 'meaning', model_col=Parameter.name, get_object=param),
-            ChapterCol(self, 'chapter', get_object=param),
-            LinkCol(self, 'counterparts', model_col=Value.name, sClass="charissil"),
+        else:
+            param = lambda i: i.valueset.parameter
+            res = [
+                IDSCodeCol(
+                    self, 'ids_code',
+                    model_col=clld.db.models.common.Parameter.id,
+                    get_object=param),
+                LinkCol(
+                    self, 'meaning',
+                    model_col=clld.db.models.common.Parameter.name,
+                    get_object=param),
+                ChapterCol(self, 'chapter', get_object=param)]
+        res.extend([
+            LinkCol(
+                self, 'counterparts',
+                model_col=clld.db.models.common.Value.name,
+                sClass="charissil"),
             Col(self, 'description'),
-        ]
+        ])
+        return res
 
 
 class RoleCol(Col):
@@ -79,13 +91,13 @@ class RoleCol(Col):
 
 class Compilers(contributor.Contributors):
     def base_query(self, query):
-        return DBSession.query(ContributionContributor).join(Contribution).join(Contributor)
+        return DBSession.query(clld.db.models.common.ContributionContributor).join(clld.db.models.common.Contribution).join(clld.db.models.common.Contributor)
 
     def col_defs(self):
         return [
-            LinkCol(self, 'name', get_object=lambda i: i.contributor, model_col=Contributor.name),
-            RoleCol(self, 'role', model_col=ContributionContributor.ord),
-            LinkCol(self, 'dictionary', get_object=lambda i: i.contribution, model_col=Contribution.name),
+            LinkCol(self, 'name', get_object=lambda i: i.contributor, model_col=clld.db.models.common.Contributor.name),
+            RoleCol(self, 'role', model_col=clld.db.models.common.ContributionContributor.ord),
+            LinkCol(self, 'dictionary', get_object=lambda i: i.contribution, model_col=clld.db.models.common.Contribution.name),
         ]
 
 
@@ -108,10 +120,10 @@ class Dictionaries(Contributions):
         Contributions.__init__(self, *args, **kw)
         self.roles = {}
         for roleid in ROLES:
-            self.roles[roleid] = aliased(ContributionContributor, name='role%s' % roleid)
+            self.roles[roleid] = aliased(clld.db.models.common.ContributionContributor, name='role%s' % roleid)
 
     def base_query(self, query):
-        q = DBSession.query(Contribution).options(joinedload(Dictionary.language))
+        q = DBSession.query(clld.db.models.common.Contribution).options(joinedload(Dictionary.language))
         for roleid, alias in self.roles.items():
             q.join(alias, alias.ord == roleid)
         return q.distinct()
