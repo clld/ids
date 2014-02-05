@@ -5,29 +5,33 @@
 
 <h2>Words in ${h.link(request, ctx.language)} for meaning "${h.link(request, ctx.parameter)}"</h2>
 
-<ul class="unstyled">
+<table class="table table-nonfluid">
+% if ctx.language.dictionary.default_representation:
+    <thead>
+        <tr>
+            <td>${ctx.language.dictionary.default_representation}</td>
+            % if ctx.language.dictionary.alt_representation:
+           <td>${ctx.language.dictionary.alt_representation}</td>
+            % endif
+        </tr>
+    </thead>
+% endif
+    <tbody>
 % for i, value in enumerate(ctx.values):
-    <li>
-        ${h.link(request, value.word, class_='charissil')}
-        % if ctx.description:
-        (${ctx.description})
+    <tr>
+        <td>${h.link(request, value.word, class_='charissil')}</td>
+        % if ctx.language.dictionary.alt_representation:
+        <td class="charissil">${value.word.alt_name or ''}</td>
         % endif
-        ;
-        % if value.word.alt_name:
-        <span class="charissil">${value.word.alt_name}</span>
-        % if ctx.alt_description:
-        (${value.word.alt_description})
-        % endif
-        ;
-        % endif
-    </li>
+    </tr>
 % endfor
-</ul>
+    </tbody>
+</table>
 % if ctx.jsondatadict.get('alt_representation'):
 <h3>${ctx.jsondatadict['alt_representation'][0]} representation</h3>
 <p>${ctx.jsondatadict['alt_representation'][1]}</p>
 % endif
-% if ctx.jsondatadict['comment']:
+% if ctx.jsondatadict.get('comment'):
 <h3>Comment</h3>
 <p>${ctx.jsondatadict['comment']}</p>
 % endif

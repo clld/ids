@@ -60,11 +60,11 @@ class Counterparts(Values):
                 LinkCol(self, 'counterparts', model_col=Value.name, sClass="charissil"),
                 Col(self, 'description'),
             ]
-
+        param = lambda i: i.valueset.parameter
         return [
-            IDSCodeCol(self, 'ids_code', model_col=Parameter.id, get_object=lambda i: i.valueset.parameter),
-            LinkCol(self, 'meaning', model_col=Parameter.name, get_object=lambda i: i.valueset.parameter),
-            ChapterCol(self, 'chapter', get_object=lambda i: i.valueset.parameter),
+            IDSCodeCol(self, 'ids_code', model_col=Parameter.id, get_object=param),
+            LinkCol(self, 'meaning', model_col=Parameter.name, get_object=param),
+            ChapterCol(self, 'chapter', get_object=param),
             LinkCol(self, 'counterparts', model_col=Value.name, sClass="charissil"),
             Col(self, 'description'),
         ]
@@ -149,18 +149,8 @@ class Entries(Parameters):
         ])
 
 
-class Chapters(DataTable):
-    def col_defs(self):
-        return [
-            IntegerIdCol(self, 'id'),
-            LinkCol(self, 'name'),
-        ]
-
-
 def includeme(config):
     config.register_datatable('values', Counterparts)
-    #config.register_datatable('languages', WoldLanguages)
     config.register_datatable('contributors', Compilers)
     config.register_datatable('contributions', Dictionaries)
     config.register_datatable('parameters', Entries)
-    config.register_datatable('chapters', Chapters)

@@ -51,6 +51,9 @@ def main(args):
         domain='ids.clld.org')
 
     DBSession.add(dataset)
+    data_desc = defaultdict(dict)
+    for l in read('x_lg_data'):
+        data_desc[l.lg_id][l.map_ids_data] = l.header
 
     # language lang
     exclude = []
@@ -63,6 +66,8 @@ def main(args):
             models.Dictionary, l.lg_id,
             id=l.lg_id, name=l.lg_name,
             language=lang,
+            default_representation=data_desc[l.lg_id].get('1'),
+            alt_representation=data_desc[l.lg_id].get('2'),
             jsondata=dict(status=l.status, date=l.date))
 
     contributors = defaultdict(list)
@@ -174,17 +179,9 @@ def main(args):
 
     # valueset
     # value ids
-    data_desc = {}
-    for l in read('x_lg_data'):
-        if l.lg_id in exclude:
-            continue
-        if l.lg_id in data_desc:
-            data_desc[l.lg_id][l.map_ids_data] = l.header
-        else:
-            data_desc[l.lg_id] = {l.map_ids_data: l.header}
 
     misaligned = []
-    missing = {}
+    missing = defaultdict(list)
     empty = re.compile('(NULL|[\s\-]*)$')
     for lg_id, entries in groupby(sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
         if lg_id in exclude:
@@ -198,22 +195,19 @@ def main(args):
             #entry_id	chap_id	lg_id	data_1	data_2
             entry_id = '%s-%s' % (l.chap_id, l.entry_id)
             if entry_id not in data['Entry']:
-                if entry_id in missing:
-                    missing[entry_id].append((language.name, l.data_1))
-                else:
-                    missing[entry_id] = [(language.name, l.data_1)]
+                missing[entry_id].append((language.name, l.data_1))
                 continue
 
             id_ = '%s-%s' % (entry_id, l.lg_id)
             vs = common.ValueSet(
                 id=id_,
-                jsondata=dict(comment=l.comment if l.comment != 'NULL' else None),
+                jsondata=dict(comment=l.comment) if l.comment != 'NULL' else None,
                 language=language,
                 contribution=data['Dictionary'][l.lg_id],
                 parameter=data['Entry'][entry_id])
 
             trans1 = list(split_counterparts(l.data_1))
-            trans2 = None  if empty.match(l.data_2) else list(split_counterparts(l.data_2))
+            trans2 = None if empty.match(l.data_2) else list(split_counterparts(l.data_2))
 
             if trans2:
                 if len(trans2) != len(trans1):
@@ -242,7 +236,7 @@ def main(args):
             if language.id == '238':
                 alt_names = []
             else:
-                alt_names = set((w[1] or '').replace('-', '') for w in words[word])
+                alt_names = set((w[1] or '').replace('-', '') for w in words[form])
             alt_names = filter(None, list(alt_names))
             try:
                 assert len(alt_names) <= 1

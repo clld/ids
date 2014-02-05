@@ -53,6 +53,9 @@ class Dictionary(Contribution, CustomModelMixin):
     language_pk = Column(Integer, ForeignKey('language.pk'), nullable=False)
     language = relationship(Language, backref=backref('dictionary', uselist=False))
 
+    default_representation = Column(Unicode)
+    alt_representation = Column(Unicode)
+
 
 @implementer(interfaces.IUnit)
 class Word(Unit, CustomModelMixin):
