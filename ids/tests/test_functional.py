@@ -29,7 +29,8 @@ class Tests(TestWithApp):
 
     def test_parameter(self):
         self.app.get_html('/parameters')
-        self.app.get_dt('/parameters')
+        r = self.app.get_dt('/parameters')
+        assert r 
         self.app.get_dt('/parameters?chapter=1')
         self.app.get_html('/parameters/1-222')
         self.app.get_json('/parameters/1-222.geojson')

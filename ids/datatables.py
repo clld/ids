@@ -149,7 +149,7 @@ class Entries(Parameters):
         return query
 
     def col_defs(self):
-        return filter(lambda col: not self.chapter or col.name != 'sf', [
+        return list(filter(lambda col: not self.chapter or col.name != 'sf', [
             IDSCodeCol(self, 'ids_code'),
             LinkCol(
                 self, 'name', sTitle='Meaning',
@@ -158,7 +158,7 @@ class Entries(Parameters):
                 "about the meaning, as well as a list of all words that are counterparts "
                 "of that meaning."),
             ChapterCol(self, 'sf', sTitle='Chapter'),
-        ])
+        ]))
 
 
 def includeme(config):
