@@ -39,7 +39,7 @@ def main(global_config, **settings):
         ('sources', partial(menu_item, 'sources')),
         ('contributors', partial(menu_item, 'contributors')),
     )
-
+    config.include('clldmpg')
     config.include('ids.datatables')
     config.include('ids.adapters')
     config.include('ids.maps')

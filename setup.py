@@ -2,12 +2,9 @@ import os
 
 from setuptools import setup, find_packages
 
-here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.txt')).read()
-CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
-
 requires = [
     'clld',
+    'clldmpg',
     'pyramid',
     'SQLAlchemy',
     'transaction',
@@ -18,10 +15,15 @@ requires = [
     'waitress',
     ]
 
+tests_require = [
+    'WebTest >= 1.3.1', # py3 compat
+    'mock',
+]
+
 setup(name='ids',
       version='0.0',
       description='ids',
-      long_description=README + '\n\n' + CHANGES,
+      long_description='',
       classifiers=[
         "Programming Language :: Python",
         "Framework :: Pyramid",
@@ -36,7 +38,7 @@ setup(name='ids',
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,
-      tests_require=requires,
+      tests_require=tests_require,
       test_suite="ids",
       entry_points="""\
       [paste.app_factory]

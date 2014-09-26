@@ -24,13 +24,13 @@ def split_counterparts(c):
 
 def main(args):
     glottocodes = glottocodes_by_isocode(
-        'postgresql://robert@/glottolog3', cols='id latitude longitude'.split())
+        args.glottolog_dburi, cols='id latitude longitude'.split())
     data = Data()
 
     def read(table):
         f = args.data_file(table + '.csv')
         if f.exists():
-            return list(dsv.namedtuples_from_csv(open(f)))
+            return list(dsv.reader(open(f), delimiter=',', namedtuples=True))
         return list(dsv.rows(
             args.data_file(table + '.tsv'), namedtuples=True, encoding='utf8'))
 
