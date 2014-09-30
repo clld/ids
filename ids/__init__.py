@@ -1,6 +1,7 @@
 from functools import partial
 
 from clld.web.app import get_configurator, menu_item
+from clld.web.adapters.base import adapter_factory
 from clld import interfaces
 
 # we must make sure custom models are known at database initialization!
@@ -43,4 +44,10 @@ def main(global_config, **settings):
     config.include('ids.datatables')
     config.include('ids.adapters')
     config.include('ids.maps')
+    config.register_adapter(adapter_factory(
+        'contribution/detail_tab.mako',
+        mimetype='application/vnd.clld.tab',
+        send_mimetype="text/plain",
+        extension='tab',
+        name='tab-separated values'), interfaces.IContribution)
     return config.make_wsgi_app()

@@ -3,7 +3,7 @@
 <%! active_menu_item = "contributions" %>
 
 
-<h2>Words in ${h.link(request, ctx.language)} for meaning "${h.link(request, ctx.parameter)}"</h2>
+<h2>Words in ${h.link(request, ctx.language)} for meaning ${ctx.parameter.id} "${h.link(request, ctx.parameter)}"</h2>
 
 <table class="table table-nonfluid">
 % if ctx.language.dictionary.default_representation:

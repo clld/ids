@@ -83,7 +83,7 @@ class Counterparts(Values):
 
 
 class RoleCol(Col):
-    __kw__ = {'choices': ROLES.items(), 'sClass': 'left'}
+    __kw__ = {'choices': list(ROLES.items()), 'sClass': 'left'}
 
     def format(self, item):
         return ROLES[item.ord]

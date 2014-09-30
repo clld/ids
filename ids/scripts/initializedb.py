@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 import sys
 import re
 import codecs
@@ -9,7 +9,7 @@ from clld.scripts.util import initializedb, Data, glottocodes_by_isocode
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib import dsv
-from clld.util import slug
+from clld.util import slug, nfilter
 
 import ids
 from ids import models
@@ -39,6 +39,9 @@ def main(args):
         name="IDS",
         description="The Intercontinental Dictionary Series",
         #published=date(2009, 8, 15),
+        publisher_name="Max Planck Institute for Evolutionary Anthropology",
+        publisher_place="Leipzig",
+        publisher_url="http://www.eva.mpg.de",
         license='http://creativecommons.org/licenses/by-nc-nd/2.0/de/deed.en',
         contact='ids@eva.mpg.de',
         jsondata={
@@ -80,7 +83,7 @@ def main(args):
             contributors[slug(l.name)].append((l.name, int(l.what_did_id), l.lg_id))
         else:
             if int(l.what_did_id) not in [4, 395]:
-                print l.what_did_id
+                print(l.what_did_id)
                 raise ValueError
             sources[l.name].append(l.lg_id)
 
@@ -118,7 +121,7 @@ def main(args):
                     language_pk=data['Language'][lg].pk,
                     source_pk=data['Source'][name].pk))
             except KeyError:
-                print name, lgs
+                print(name, lgs)
                 continue
 
     # identifier sil_lang/alt_names
@@ -219,9 +222,9 @@ def main(args):
                 if len(trans2) != len(trans1):
                     if language.id != '238':
                         misaligned.append((l.chap_id, l.entry_id, l.lg_id))
-                        print '===', language.id, language.name
-                        print l.data_1
-                        print l.data_2
+                        print('===', language.id, language.name)
+                        print(l.data_1)
+                        print(l.data_2)
                     #assert language.id == '238'  # Rapa Nui has problems!
                     #
                     # TODO: simply store l.data_2 as data with the valueset!?
@@ -243,12 +246,12 @@ def main(args):
                 alt_names = []
             else:
                 alt_names = set((w[1] or '').replace('-', '') for w in words[form])
-            alt_names = filter(None, list(alt_names))
+            alt_names = nfilter(alt_names)
             try:
                 assert len(alt_names) <= 1
             except AssertionError:
-                print '---', language.id, language.name
-                print alt_names
+                print('---', language.id, language.name)
+                print(alt_names)
             word = models.Word(
                 id='%s-%s' % (language.id, i + 1),
                 name=form,
