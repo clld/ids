@@ -31,7 +31,7 @@ class Chapter(Base, IdNameDescriptionMixin):
 # specialized common mapper classes
 #-----------------------------------------------------------------------------
 @implementer(interfaces.IParameter)
-class Entry(Parameter, CustomModelMixin):
+class Entry(CustomModelMixin, Parameter):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     chapter_pk = Column(Integer, ForeignKey('chapter.pk'), nullable=False)
     chapter = relationship(Chapter, backref='entries')
@@ -44,7 +44,7 @@ class Entry(Parameter, CustomModelMixin):
 
 
 @implementer(interfaces.IContribution)
-class Dictionary(Contribution, CustomModelMixin):
+class Dictionary(CustomModelMixin, Contribution):
     pk = Column(Integer, ForeignKey('contribution.pk'), primary_key=True)
     language_pk = Column(Integer, ForeignKey('language.pk'), nullable=False)
     language = relationship(Language, backref=backref('dictionary', uselist=False))
@@ -54,7 +54,7 @@ class Dictionary(Contribution, CustomModelMixin):
 
 
 @implementer(interfaces.IUnit)
-class Word(Unit, CustomModelMixin):
+class Word(CustomModelMixin, Unit):
     pk = Column(Integer, ForeignKey('unit.pk'), primary_key=True)
 
     alt_name = Column(Unicode)
@@ -62,7 +62,7 @@ class Word(Unit, CustomModelMixin):
 
 
 @implementer(interfaces.IValue)
-class Counterpart(Value, CustomModelMixin):
+class Counterpart(CustomModelMixin, Value):
     """a counterpart relates a meaning with a word
     """
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
