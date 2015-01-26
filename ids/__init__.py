@@ -29,21 +29,9 @@ def link_attrs(req, obj, **kw):
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    utilities = [
-        (link_attrs, interfaces.ILinkAttrs),
-    ]
+    utilities = [(link_attrs, interfaces.ILinkAttrs)]
     config = get_configurator('ids', *utilities, settings=settings)
-    config.register_menu(
-        ('dataset', partial(menu_item, 'dataset', label='Home')),
-        ('contributions', partial(menu_item, 'contributions')),
-        ('parameters', partial(menu_item, 'parameters')),
-        ('sources', partial(menu_item, 'sources')),
-        ('contributors', partial(menu_item, 'contributors')),
-    )
     config.include('clldmpg')
-    config.include('ids.datatables')
-    config.include('ids.adapters')
-    config.include('ids.maps')
     config.register_adapter(adapter_factory(
         'contribution/detail_tab.mako',
         mimetype='application/vnd.clld.tab',

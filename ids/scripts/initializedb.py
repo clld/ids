@@ -4,6 +4,7 @@ import re
 import codecs
 from itertools import groupby
 from collections import defaultdict
+import transaction
 
 from clld.scripts.util import initializedb, Data, glottocodes_by_isocode
 from clld.db.meta import DBSession
@@ -24,7 +25,9 @@ def split_counterparts(c):
 
 def main(args):
     glottocodes = glottocodes_by_isocode(
-        args.glottolog_dburi, cols='id latitude longitude'.split())
+        #args.glottolog_dburi,
+        'postgresql://robert@/glottolog3',
+        cols='id latitude longitude'.split())
     data = Data()
 
     def read(table):
@@ -92,7 +95,12 @@ def main(args):
         c = data.add(common.Contributor, s, id=s, name=name)
         if name == 'Mary Ritchie Key':
             c.address = 'University of California, Irvine'
-        for _, what, lg in roles:
+        for lg, specs in groupby(sorted(roles, key=lambda r: r[2]), key=lambda r: r[2]):
+            sroles = sorted(
+                [s[1] for s in specs],
+                reverse=True,
+                key=lambda what: what + 2 if what == 2 else what)
+            what = sroles[0]
             DBSession.add(common.ContributionContributor(
                 contribution=data['Dictionary'][lg],
                 contributor=c,
@@ -195,6 +203,7 @@ def main(args):
             sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
         if lg_id in exclude:
             continue
+
         language = data['Language'][lg_id]
         desc = data_desc.get(lg_id, {})
         words = defaultdict(list)
