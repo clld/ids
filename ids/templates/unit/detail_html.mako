@@ -6,11 +6,11 @@
 <h2>Word <span class="charissil">${ctx}</span></h2>
 
 % if ctx.alt_name:
-${u.dl_table(**{ctx.alt_description: ctx.alt_name})}
+${util.dl_table(**{ctx.alt_description: ctx.alt_name})}
 % endif
 
 <h3>Meanings</h3>
-<ul class="unstyled">
+<ul>
 % for i, value in enumerate(ctx.counterparts):
     <li>${h.link(request, value.valueset.parameter)}</li>
 % endfor
