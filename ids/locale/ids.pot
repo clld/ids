@@ -1,14 +1,14 @@
 # Translations template for ids.
-# Copyright (C) 2013 ORGANIZATION
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the ids project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: ids 0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-12-17 15:53+0100\n"
+"POT-Creation-Date: 2015-01-27 19:35+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,23 +17,27 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 1.3\n"
 
-#: ids/__init__.py:10
+#: ids/__init__.py:12
 msgid "Contribution"
 msgstr ""
 
-#: ids/__init__.py:11
+#: ids/__init__.py:13
 msgid "Contributions"
 msgstr ""
 
-#: ids/__init__.py:12
+#: ids/__init__.py:14
 msgid "Parameter"
 msgstr ""
 
-#: ids/__init__.py:13
+#: ids/__init__.py:15
 msgid "Parameters"
 msgstr ""
 
-#: ids/__init__.py:14
+#: ids/__init__.py:16
 msgid "Value"
+msgstr ""
+
+#: ids/__init__.py:17
+msgid "Values"
 msgstr ""
 

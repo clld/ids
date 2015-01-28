@@ -1,14 +1,16 @@
 from __future__ import unicode_literals, print_function
 import sys
 import re
-import codecs
 from itertools import groupby
 from collections import defaultdict
 import transaction
 
+from sqlalchemy import Index
+
 from clld.scripts.util import initializedb, Data, glottocodes_by_isocode
 from clld.db.meta import DBSession
 from clld.db.models import common
+from clld.db.util import collkey, with_collkey_ddl
 from clld.lib import dsv
 from clld.util import slug, nfilter
 
@@ -23,7 +25,29 @@ def split_counterparts(c):
             yield word
 
 
+def norm(f, desc, lid):
+    f_ = f.replace('-', '').lower()
+    if desc == 'Phonemic':
+        for k, v in [
+            ('\u045b', 'h'),
+            ('\u043e', 'o'),
+            ('\u0445', 'x'),
+            ('\u0435', 'e'),
+            ('\u0430', 'a'),
+        ]:
+            f_ = f_.replace(k, v)
+    if int(lid) in [160, 162, 532]:
+        f_ = f_.replace('\u2019', '\u02bc')
+    #if int(lid) in [27, 29]:
+    #    f_ = f_.replace('\u02b7', 'w')
+    return f_
+
+
+with_collkey_ddl()
+
+
 def main(args):
+    Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     glottocodes = glottocodes_by_isocode(
         #args.glottolog_dburi,
         'postgresql://robert@/glottolog3',
@@ -31,11 +55,8 @@ def main(args):
     data = Data()
 
     def read(table):
-        f = args.data_file(table + '.csv')
-        if f.exists():
-            return list(dsv.reader(open(f), delimiter=',', namedtuples=True))
-        return list(dsv.rows(
-            args.data_file(table + '.tsv'), namedtuples=True, encoding='utf8'))
+        return list(dsv.reader(
+            args.data_file(table + '.csv'), delimiter=',', namedtuples=True))
 
     dataset = common.Dataset(
         id=ids.__name__,
@@ -159,7 +180,8 @@ def main(args):
             altnames[l.name] = identifier
         if l.lg_id not in exclude and l.name != data['Language'][l.lg_id].name:
             DBSession.add(common.LanguageIdentifier(
-                identifier=identifier, language=data['Language'][l.lg_id]))
+                identifier=identifier,
+                language=data['Language'][l.lg_id]))
 
     # languageidentifier x_lg_sil
     for l in read('x_lg_sil'):
@@ -193,36 +215,49 @@ def main(args):
             kw[ll] = getattr(l, 'trans_' + ll)
         data.add(models.Entry, id_, sub_code=l.entry_id, **kw)
 
-    # valueset
-    # value ids
-
     misaligned = []
-    missing = defaultdict(list)
     empty = re.compile('(NULL|[\s\-]*)$')
+
+    DBSession.flush()
+    for entity in 'Language Entry Chapter Dictionary'.split():
+        for k in data[entity].keys()[:]:
+            data[entity][k] = data[entity][k].pk
+
     for lg_id, entries in groupby(
             sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
         if lg_id in exclude:
             continue
 
-        language = data['Language'][lg_id]
+        # keep the memory footprint reasonable
+        transaction.commit()
+        transaction.begin()
+
+        language = common.Language.get(data['Language'][lg_id])
         desc = data_desc.get(lg_id, {})
         words = defaultdict(list)
         for l in entries:
             if empty.match(l.data_1):
                 continue
-            #entry_id	chap_id	lg_id	data_1	data_2
+
             entry_id = '%s-%s' % (l.chap_id, l.entry_id)
             if entry_id not in data['Entry']:
-                missing[entry_id].append((language.name, l.data_1))
-                continue
+                data.add(
+                    models.Entry, entry_id,
+                    id=entry_id,
+                    name=entry_id,
+                    #active=False,
+                    sub_code=l.entry_id,
+                    chapter_pk=data['Chapter'][l.chap_id])
+                DBSession.flush()
+                data['Entry'][entry_id] = data['Entry'][entry_id].pk
 
             id_ = '%s-%s' % (entry_id, l.lg_id)
             vs = common.ValueSet(
                 id=id_,
                 jsondata=dict(comment=l.comment) if l.comment != 'NULL' else None,
                 language=language,
-                contribution=data['Dictionary'][l.lg_id],
-                parameter=data['Entry'][entry_id])
+                contribution_pk=data['Dictionary'][l.lg_id],
+                parameter_pk=data['Entry'][entry_id])
 
             trans1 = list(split_counterparts(l.data_1))
             trans2 = None if empty.match(l.data_2) else list(split_counterparts(l.data_2))
@@ -231,9 +266,9 @@ def main(args):
                 if len(trans2) != len(trans1):
                     if language.id != '238':
                         misaligned.append((l.chap_id, l.entry_id, l.lg_id))
-                        print('===', language.id, language.name)
-                        print(l.data_1)
-                        print(l.data_2)
+                        #print('===', language.id, language.name)
+                        #print(l.data_1)
+                        #print(l.data_2)
                     #assert language.id == '238'  # Rapa Nui has problems!
                     #
                     # TODO: simply store l.data_2 as data with the valueset!?
@@ -250,11 +285,13 @@ def main(args):
                 words[word].append((v, trans2[i] if trans2 else None))
 
         for i, form in enumerate(words.keys()):
-            # make sure the word has the same alternative transcription for all meanings:
+            # Since we identify words based on their string representation, we have to
+            # make sure a word has the same alternative transcription for all meanings.
             if language.id == '238':
                 alt_names = []
             else:
-                alt_names = set((w[1] or '').replace('-', '') for w in words[form])
+                alt_names = set(norm(w[1] or '', desc.get('2'), language.id)
+                                for w in words[form])
             alt_names = nfilter(alt_names)
             try:
                 assert len(alt_names) <= 1
@@ -266,7 +303,7 @@ def main(args):
                 name=form,
                 description=desc.get('1'),
                 language=language,
-                alt_name=alt_names[0] if alt_names else None,
+                alt_name=', '.join(alt_names) if alt_names else None,
                 alt_description=desc.get('2')
             )
             for v, _ in words[form]:
@@ -275,14 +312,8 @@ def main(args):
 
         DBSession.flush()
 
-    with open(args.data_file('misaligned.tsv'), 'w') as fp:
-        for m in misaligned:
-            fp.write('%s\t%s\t%s\n' % m)
-
-    with codecs.open(args.data_file('missing.tsv'), 'w', encoding='utf8') as fp:
-        for id_, items in missing.items():
-            for l, c in items:
-                fp.write('%s\t%s\t%s\n' % (id_, l, c))
+    with dsv.UnicodeWriter(args.data_file('misaligned.csv')) as fp:
+        fp.writerows(misaligned)
 
 
 def prime_cache(args):

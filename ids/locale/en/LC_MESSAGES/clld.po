@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-12-17 15:53+0100\n"
+"POT-Creation-Date: 2015-01-27 19:35+0100\n"
 "PO-Revision-Date: 2013-12-17 15:46+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en <LL@li.org>\n"
@@ -17,22 +17,27 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 1.3\n"
 
-#: ids/__init__.py:10
+#: ids/__init__.py:12
 msgid "Contribution"
 msgstr "Dictionary"
 
-#: ids/__init__.py:11
+#: ids/__init__.py:13
 msgid "Contributions"
 msgstr "Dictionaries"
 
-#: ids/__init__.py:12
+#: ids/__init__.py:14
 msgid "Parameter"
 msgstr "Meaning"
 
-#: ids/__init__.py:13
+#: ids/__init__.py:15
 msgid "Parameters"
 msgstr "Meanings"
 
-#: ids/__init__.py:14
+#: ids/__init__.py:16
 msgid "Value"
 msgstr "Counterparts"
+
+#: ids/__init__.py:17
+msgid "Values"
+msgstr "Counterparts"
+

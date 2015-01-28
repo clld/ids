@@ -1,6 +1,6 @@
 from sqlalchemy import Integer
 from sqlalchemy.sql.expression import cast
-from sqlalchemy.orm import aliased, joinedload
+from sqlalchemy.orm import aliased, joinedload, joinedload_all
 
 from clld.web.datatables import Values
 from clld.web.datatables.base import Col, LinkCol, LinkToMapCol
@@ -10,7 +10,9 @@ from clld.web.datatables.parameter import Parameters
 from clld.web.util.helpers import link
 from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
+from clld.db.util import collkey
 import clld.db.models.common
+from clld.db.models.common import ValueSet, Value, Parameter, Language
 
 from ids.models import Chapter, Entry, ROLES, Dictionary
 
@@ -47,12 +49,28 @@ class ChapterCol(Col):
         return Entry.chapter_pk == int(qs)
 
 
+class FormCol(LinkCol):
+    def order(self):
+        return collkey(Value.name)
+
+
 class Counterparts(Values):
     """Lists of counterparts
     """
+    def base_query(self, query):
+        query = Values.base_query(self, query)
+        if not self.parameter and not self.language and not self.contribution:
+            query = DBSession.query(Value).join(ValueSet)\
+                .join(ValueSet.language)\
+                .join(ValueSet.parameter)\
+                .options(joinedload_all(Value.valueset, ValueSet.language),
+                         joinedload(Value.valueset, ValueSet.parameter))
+        return query
+
     def col_defs(self):
+        lang = lambda i: i.valueset.language
+        param = lambda i: i.valueset.parameter
         if self.parameter:
-            lang = lambda i: i.valueset.language
             res = [
                 LinkToMapCol(self, 'm', get_object=lang),
                 LinkCol(
@@ -60,8 +78,7 @@ class Counterparts(Values):
                     model_col=clld.db.models.common.Language.name,
                     get_object=lang),
             ]
-        else:
-            param = lambda i: i.valueset.parameter
+        elif self.language or self.contribution:
             res = [
                 IDSCodeCol(
                     self, 'ids_code',
@@ -72,8 +89,24 @@ class Counterparts(Values):
                     model_col=clld.db.models.common.Parameter.name,
                     get_object=param),
                 ChapterCol(self, 'chapter', get_object=param)]
+        else:
+            res = [
+                IDSCodeCol(
+                    self, 'ids_code',
+                    model_col=clld.db.models.common.Parameter.id,
+                    get_object=param),
+                LinkCol(
+                    self, 'meaning',
+                    model_col=clld.db.models.common.Parameter.name,
+                    get_object=param),
+                ChapterCol(self, 'chapter', get_object=param),
+                LinkCol(
+                    self, 'language',
+                    model_col=clld.db.models.common.Language.name,
+                    get_object=lang),
+            ]
         res.extend([
-            LinkCol(
+            FormCol(
                 self, 'counterparts',
                 model_col=clld.db.models.common.Value.name,
                 sClass="charissil"),
