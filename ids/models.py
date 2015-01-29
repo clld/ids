@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship, backref
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
-    Parameter, IdNameDescriptionMixin, Contribution, Language, Value, Unit,
+    Parameter, IdNameDescriptionMixin, Contribution, Language, Value, Unit, ValueSet,
 )
 
 
@@ -69,3 +69,13 @@ class Counterpart(CustomModelMixin, Value):
 
     word_pk = Column(Integer, ForeignKey('unit.pk'))
     word = relationship(Word, backref='counterparts')
+
+
+@implementer(interfaces.IValueSet)
+class Synset(CustomModelMixin, ValueSet):
+    """a synset is the set of all counterparts for one meaning in one dictionary.
+    """
+    pk = Column(Integer, ForeignKey('valueset.pk'), primary_key=True)
+
+    alt_representation = Column(Unicode)
+    comment = Column(Unicode)

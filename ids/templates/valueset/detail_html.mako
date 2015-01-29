@@ -27,13 +27,9 @@
 % endfor
     </tbody>
 </table>
-% if ctx.jsondatadict.get('alt_representation'):
-<h3>${ctx.jsondatadict['alt_representation'][0]} representation</h3>
-<p>${ctx.jsondatadict['alt_representation'][1]}</p>
-% endif
-% if ctx.jsondatadict.get('comment'):
+% if ctx.comment:
 <h3>Comment</h3>
-<p>${ctx.jsondatadict['comment']}</p>
+<p>${ctx.comment}</p>
 % endif
 <%def name="sidebar()">
 <div class="well well-small">
@@ -43,7 +39,7 @@
         ${h.link(request, ctx.contribution)}
         by
         ${h.linked_contributors(request, ctx.contribution)}
-        ${h.button('cite', onclick=h.JSModal.show(ctx.contribution.name, request.resource_url(ctx.contribution, ext='md.html')))}
+        ${h.cite_button(request, ctx.contribution)}
     </dd>
     <dt class="parameter">${_('Parameter')}:</dt>
     <dd class="parameter">${h.link(request, ctx.parameter)}</dd>

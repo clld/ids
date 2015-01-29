@@ -18,6 +18,13 @@ import ids
 from ids import models
 
 
+empty = re.compile('(NULL|[\s\-]*)$')
+
+
+def get_string(s):
+    return '' if empty.match(s) else s
+
+
 def split_counterparts(c):
     for word in re.split('\s*(?:,|;)\s*', c):
         word = word.strip()
@@ -216,7 +223,6 @@ def main(args):
         data.add(models.Entry, id_, sub_code=l.entry_id, **kw)
 
     misaligned = []
-    empty = re.compile('(NULL|[\s\-]*)$')
 
     DBSession.flush()
     for entity in 'Language Entry Chapter Dictionary'.split():
@@ -252,9 +258,10 @@ def main(args):
                 data['Entry'][entry_id] = data['Entry'][entry_id].pk
 
             id_ = '%s-%s' % (entry_id, l.lg_id)
-            vs = common.ValueSet(
+            vs = models.Synset(
                 id=id_,
-                jsondata=dict(comment=l.comment) if l.comment != 'NULL' else None,
+                comment=get_string(l.comment),
+                alt_representation=get_string(l.data_2),
                 language=language,
                 contribution_pk=data['Dictionary'][l.lg_id],
                 parameter_pk=data['Entry'][entry_id])
@@ -270,10 +277,6 @@ def main(args):
                         #print(l.data_1)
                         #print(l.data_2)
                     #assert language.id == '238'  # Rapa Nui has problems!
-                    #
-                    # TODO: simply store l.data_2 as data with the valueset!?
-                    #
-                    vs.update_jsondata(alt_representation=(desc.get('2'), l.data_2))
                     trans2 = None
 
             for i, word in enumerate(trans1):
