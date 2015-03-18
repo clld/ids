@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'clld>=0.30',
+    'clld>=0.33',
     'clldmpg',
-    ]
+]
 
 tests_require = [
     'WebTest >= 1.3.1', # py3 compat

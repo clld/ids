@@ -42,7 +42,7 @@
 <h2>${ctx.name} Dictionary</h2>
 ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 
-% if ctx.jsondatadict['status'] == '1':
+% if ctx.jsondata['status'] == '1':
 <div class="alert alert-info">in progress</div>
 % endif
 
