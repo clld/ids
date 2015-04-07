@@ -229,16 +229,22 @@ def main(args):
         for k in data[entity].keys()[:]:
             data[entity][k] = data[entity][k].pk
 
+    synsets = set()
+
     for lg_id, entries in groupby(
             sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
-        if lg_id in exclude:
+        if lg_id in exclude or not lg_id:
             continue
 
         # keep the memory footprint reasonable
         transaction.commit()
         transaction.begin()
 
-        language = common.Language.get(data['Language'][lg_id])
+        try:
+            language = common.Language.get(data['Language'][lg_id])
+        except KeyError:
+            print(list(entries))
+            raise
         desc = data_desc.get(lg_id, {})
         words = defaultdict(list)
         for l in entries:
@@ -258,13 +264,17 @@ def main(args):
                 data['Entry'][entry_id] = data['Entry'][entry_id].pk
 
             id_ = '%s-%s' % (entry_id, l.lg_id)
-            vs = models.Synset(
-                id=id_,
-                comment=get_string(l.comment),
-                alt_representation=get_string(l.data_2),
-                language=language,
-                contribution_pk=data['Dictionary'][l.lg_id],
-                parameter_pk=data['Entry'][entry_id])
+            if id_ in synsets:
+                vs = models.Synset.get(id_)
+            else:
+                vs = models.Synset(
+                    id=id_,
+                    comment=get_string(l.comment or ''),
+                    alt_representation=get_string(l.data_2),
+                    language=language,
+                    contribution_pk=data['Dictionary'][l.lg_id],
+                    parameter_pk=data['Entry'][entry_id])
+                synsets.add(id_)
 
             trans1 = list(split_counterparts(l.data_1))
             trans2 = None if empty.match(l.data_2) else list(split_counterparts(l.data_2))
@@ -281,7 +291,7 @@ def main(args):
 
             for i, word in enumerate(trans1):
                 v = models.Counterpart(
-                    id=id_ + '-' + str(i + 1),
+                    id=id_ + '-' + str(i + 1 + len(vs.values)),
                     name=word,
                     description=desc.get('1'),
                     valueset=vs)
