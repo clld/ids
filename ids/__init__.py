@@ -1,6 +1,5 @@
-from functools import partial
+from pyramid.config import Configurator
 
-from clld.web.app import get_configurator, menu_item
 from clld.web.adapters.base import adapter_factory
 from clld import interfaces
 
@@ -30,9 +29,9 @@ def link_attrs(req, obj, **kw):
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    utilities = [(link_attrs, interfaces.ILinkAttrs)]
-    config = get_configurator('ids', *utilities, settings=settings)
+    config = Configurator(settings=settings)
     config.include('clldmpg')
+    config.registry.registerUtility(link_attrs, interfaces.ILinkAttrs)
     config.register_adapter(adapter_factory(
         'contribution/detail_tab.mako',
         mimetype='application/vnd.clld.tab',

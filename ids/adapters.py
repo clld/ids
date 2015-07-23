@@ -8,7 +8,9 @@ from clld.interfaces import IParameter, IContribution, IIndex
 
 class GeoJsonMeaning(GeoJsonParameter):
     def feature_properties(self, ctx, req, valueset):
-        return {'label': ', '.join(v.name for v in valueset.values)}
+        return {
+            'values': list(valueset.values),
+            'label': ', '.join(v.name for v in valueset.values)}
 
 
 class GeoJsonDictionaries(GeoJsonLanguages):
