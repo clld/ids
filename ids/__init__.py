@@ -2,6 +2,7 @@ from pyramid.config import Configurator
 
 from clld.web.adapters.base import adapter_factory
 from clld import interfaces
+from clld_glottologfamily_plugin.util import LanguageByFamilyMapMarker
 
 # we must make sure custom models are known at database initialization!
 from ids import models
@@ -31,6 +32,7 @@ def main(global_config, **settings):
     """
     config = Configurator(settings=settings)
     config.include('clldmpg')
+    config.registry.registerUtility(LanguageByFamilyMapMarker(), interfaces.IMapMarker)
     config.registry.registerUtility(link_attrs, interfaces.ILinkAttrs)
     config.register_adapter(adapter_factory(
         'contribution/detail_tab.mako',

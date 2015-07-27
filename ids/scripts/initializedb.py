@@ -13,6 +13,7 @@ from clld.db.models import common
 from clld.db.util import collkey, with_collkey_ddl
 from clld.lib import dsv
 from clld.util import slug, nfilter
+from clld_glottologfamily_plugin.util import load_families
 
 import ids
 from ids import models
@@ -55,10 +56,6 @@ with_collkey_ddl()
 
 def main(args):
     Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
-    glottocodes = glottocodes_by_isocode(
-        #args.glottolog_dburi,
-        'postgresql://robert@/glottolog3',
-        cols='id latitude longitude'.split())
     data = Data()
 
     def read(table):
@@ -93,7 +90,7 @@ def main(args):
         if l.status == '1':
             exclude.append(l.lg_id)
             continue
-        lang = data.add(common.Language, l.lg_id, id=l.lg_id, name=l.lg_name)
+        lang = data.add(models.IdsLanguage, l.lg_id, id=l.lg_id, name=l.lg_name)
         data.add(
             models.Dictionary, l.lg_id,
             id=l.lg_id, name=l.lg_name,
@@ -101,6 +98,11 @@ def main(args):
             default_representation=data_desc[l.lg_id].get('1'),
             alt_representation=data_desc[l.lg_id].get('2'),
             jsondata=dict(status=l.status, date=l.date))
+
+    iso_codes = {l.id: l.sil_code for l in read('sil_lang')}
+    languages = {l.lg_id: iso_codes[l.sil_id]
+                 for l in read('x_lg_sil') if l.lg_id not in exclude}
+    load_families(Data(), [(v, data['IdsLanguage'][k]) for k, v in languages.items()])
 
     contributors = defaultdict(list)
     sources = defaultdict(list)
@@ -154,27 +156,11 @@ def main(args):
                 continue
             try:
                 DBSession.add(common.LanguageSource(
-                    language_pk=data['Language'][lg].pk,
+                    language_pk=data['IdsLanguage'][lg].pk,
                     source_pk=data['Source'][name].pk))
             except KeyError:
                 print(name, lgs)
                 continue
-
-    # identifier sil_lang/alt_names
-    for l in read('sil_lang'):
-        data.add(
-            common.Identifier, l.id,
-            id='iso-%s' % l.id,
-            type=common.IdentifierType.iso.value,
-            name=l.sil_code,
-            description=l.sil_name)
-        if l.sil_code in glottocodes:
-            gc = glottocodes[l.sil_code][0]
-            data.add(
-                common.Identifier, gc,
-                id=gc,
-                type=common.IdentifierType.glottolog.value,
-                name=gc)
 
     altnames = {}
     for i, l in enumerate(read('alt_names')):
@@ -185,24 +171,10 @@ def main(args):
                 common.Identifier, l.name,
                 id='name-%s' % i, type='name', name=l.name, description='IDS')
             altnames[l.name] = identifier
-        if l.lg_id not in exclude and l.name != data['Language'][l.lg_id].name:
+        if l.lg_id not in exclude and l.name != data['IdsLanguage'][l.lg_id].name:
             DBSession.add(common.LanguageIdentifier(
                 identifier=identifier,
-                language=data['Language'][l.lg_id]))
-
-    # languageidentifier x_lg_sil
-    for l in read('x_lg_sil'):
-        if l.lg_id in exclude:
-            continue
-        identifier = data['Identifier'][l.sil_id]
-        language = data['Language'][l.lg_id]
-        DBSession.add(common.LanguageIdentifier(identifier=identifier, language=language))
-        if identifier.name in glottocodes:
-            language.latitude = glottocodes[identifier.name][1]
-            language.longitude = glottocodes[identifier.name][2]
-            DBSession.add(common.LanguageIdentifier(
-                identifier=data['Identifier'][glottocodes[identifier.name][0]],
-                language=language))
+                language=data['IdsLanguage'][l.lg_id]))
 
     # parameter chapter/entry
     for l in read('chapter'):
@@ -225,7 +197,7 @@ def main(args):
     misaligned = []
 
     DBSession.flush()
-    for entity in 'Language Entry Chapter Dictionary'.split():
+    for entity in 'IdsLanguage Entry Chapter Dictionary'.split():
         for k in data[entity].keys()[:]:
             data[entity][k] = data[entity][k].pk
 
@@ -241,7 +213,7 @@ def main(args):
         transaction.begin()
 
         try:
-            language = common.Language.get(data['Language'][lg_id])
+            language = common.Language.get(data['IdsLanguage'][lg_id])
         except KeyError:
             print(list(entries))
             raise

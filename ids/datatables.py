@@ -1,6 +1,6 @@
 from sqlalchemy import Integer
 from sqlalchemy.sql.expression import cast
-from sqlalchemy.orm import aliased, joinedload, joinedload_all
+from sqlalchemy.orm import aliased, joinedload, joinedload_all, contains_eager
 
 from clld.web.datatables import Values
 from clld.web.datatables.base import Col, LinkCol, LinkToMapCol
@@ -12,9 +12,10 @@ from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
 from clld.db.util import collkey
 import clld.db.models.common
-from clld.db.models.common import ValueSet, Value, Parameter, Language
+from clld.db.models.common import ValueSet, Value, Language
+from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyCol
 
-from ids.models import Chapter, Entry, ROLES, Dictionary
+from ids.models import Chapter, Entry, ROLES, Dictionary, IdsLanguage
 
 
 class IDSCodeCol(Col):
@@ -156,7 +157,12 @@ class Dictionaries(Contributions):
             self.roles[roleid] = aliased(clld.db.models.common.ContributionContributor, name='role%s' % roleid)
 
     def base_query(self, query):
-        q = DBSession.query(clld.db.models.common.Contribution).options(joinedload(Dictionary.language))
+        q = DBSession.query(clld.db.models.common.Contribution)\
+            .join(Dictionary.language)\
+            .outerjoin(IdsLanguage.family)\
+            .options(
+                contains_eager(Dictionary.language),
+                joinedload(Dictionary.language, IdsLanguage.family))
         for roleid, alias in self.roles.items():
             q.join(alias, alias.ord == roleid)
         return q.distinct()
@@ -165,6 +171,8 @@ class Dictionaries(Contributions):
         res = [
             LinkCol(self, 'name'),
             LinkToMapCol(self, 'm', get_object=lambda i: i.language),
+            MacroareaCol(self, 'macroarea', get_object=lambda i: i.language, language_cls=IdsLanguage),
+            FamilyCol(self, 'family', get_object=lambda i: i.language, language_cls=IdsLanguage),
         ]
         for roleid in ROLES.keys():
             res.append(ContributorCol(self, 'role%s' % roleid, roleid))

@@ -24,4 +24,4 @@ class ContributionsMap(Map):
 def includeme(config):
     config.register_map('parameter', MeaningMap)
     config.register_map('contribution', ContributionMap)
-    config.register_map('languages', ContributionsMap)
+    config.register_map('contributions', ContributionsMap)

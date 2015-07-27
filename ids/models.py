@@ -15,6 +15,7 @@ from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Contribution, Language, Value, Unit, ValueSet,
 )
+from clld_glottologfamily_plugin.models import HasFamilyMixin
 
 
 ROLES = OrderedDict()
@@ -27,9 +28,6 @@ class Chapter(Base, IdNameDescriptionMixin):
     pass
 
 
-#-----------------------------------------------------------------------------
-# specialized common mapper classes
-#-----------------------------------------------------------------------------
 @implementer(interfaces.IParameter)
 class Entry(CustomModelMixin, Parameter):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
@@ -41,6 +39,11 @@ class Entry(CustomModelMixin, Parameter):
     russian = Column(Unicode)
     spanish = Column(Unicode)
     portugese = Column(Unicode)
+
+
+@implementer(interfaces.ILanguage)
+class IdsLanguage(CustomModelMixin, Language, HasFamilyMixin):
+    pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
 
 
 @implementer(interfaces.IContribution)
