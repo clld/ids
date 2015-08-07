@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'clld>=1.1.0',
+    'clld>=1.5.0',
     'clldmpg>=1.0.0',
     'clld-glottologfamily-plugin>=0.3',
 ]
