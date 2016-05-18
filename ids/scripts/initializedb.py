@@ -1,3 +1,4 @@
+# coding: utf8
 from __future__ import unicode_literals, print_function
 import sys
 import re
@@ -7,16 +8,21 @@ import transaction
 
 from sqlalchemy import Index
 
-from clld.scripts.util import initializedb, Data, glottocodes_by_isocode
+from clld.scripts.util import initializedb, Data
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.db.util import collkey, with_collkey_ddl
-from clld.lib import dsv
-from clld.util import slug, nfilter
+from clldutils import dsv
+from clldutils.misc import slug, nfilter
+from clldutils.path import Path
 from clld_glottologfamily_plugin.util import load_families
+from pyglottolog.api import Glottolog
+from pyglottolog.util import languoids_path
+from pyglottolog.languoids import walk_tree
 
 import ids
 from ids import models
+from ids.scripts.util import LANGS
 
 
 empty = re.compile('(NULL|[\s\-]*)$')
@@ -24,6 +30,10 @@ empty = re.compile('(NULL|[\s\-]*)$')
 
 def get_string(s):
     return '' if empty.match(s) else s
+
+
+# we may have to map iso codes to glottocodes by hand, e.g. arc (imperial aramaic) doesn't
+# exist in glottolog 2.7.
 
 
 def split_counterparts(c):
@@ -52,6 +62,8 @@ def norm(f, desc, lid):
 
 
 with_collkey_ddl()
+GLOTTOLOG_REPOS = Path(ids.__file__).parent.parent.parent.parent.joinpath(
+    'glottolog3', 'glottolog')
 
 
 def main(args):
@@ -59,8 +71,10 @@ def main(args):
     data = Data()
 
     def read(table):
-        return list(dsv.reader(
-            args.data_file(table + '.csv'), delimiter=',', namedtuples=True))
+        fname = args.data_file(table + '.all.csv')
+        if not fname.exists():
+            fname = args.data_file(table + '.csv')
+        return list(dsv.reader(fname, namedtuples=True))
 
     dataset = common.Dataset(
         id=ids.__name__,
@@ -85,12 +99,20 @@ def main(args):
         data_desc[l.lg_id][l.map_ids_data] = l.header
 
     # language lang
+    iso_codes = {l.id: l.sil_code for l in read('sil_lang')}
+    iso_codes = {l.lg_id: iso_codes[l.sil_id] for l in read('x_lg_sil')}
+    languages = []
+
     exclude = []
     for l in read('lang'):
         if l.status == '1':
             exclude.append(l.lg_id)
             continue
-        lang = data.add(models.IdsLanguage, l.lg_id, id=l.lg_id, name=l.lg_name)
+        lang_changed = LANGS.get(int(l.lg_id), {})
+        code = lang_changed.get('glotto') or lang_changed.get('iso') or iso_codes.get(l.lg_id)
+        lang = data.add(models.IdsLanguage, l.lg_id, id=l.lg_id, name=lang_changed.get('name', l.lg_name))
+        if code:
+            languages.append((code, lang))
         data.add(
             models.Dictionary, l.lg_id,
             id=l.lg_id, name=l.lg_name,
@@ -99,10 +121,13 @@ def main(args):
             alt_representation=data_desc[l.lg_id].get('2'),
             jsondata=dict(status=l.status, date=l.date))
 
-    iso_codes = {l.id: l.sil_code for l in read('sil_lang')}
-    languages = {l.lg_id: iso_codes[l.sil_id]
-                 for l in read('x_lg_sil') if l.lg_id not in exclude}
-    load_families(Data(), [(v, data['IdsLanguage'][k]) for k, v in languages.items()])
+    iso2glotto = {}
+    for l in walk_tree(tree=languoids_path('tree', GLOTTOLOG_REPOS)):
+        if l.iso:
+            iso2glotto[l.iso] = l.id
+
+    load_families(
+        Data(), [(iso2glotto.get(c, c), l) for c, l in languages], glottolog=Glottolog(GLOTTOLOG_REPOS), isolates_icon='tcccccc')
 
     contributors = defaultdict(list)
     sources = defaultdict(list)
@@ -115,9 +140,7 @@ def main(args):
         if int(l.what_did_id) in models.ROLES:
             contributors[slug(l.name)].append((l.name, int(l.what_did_id), l.lg_id))
         else:
-            if int(l.what_did_id) not in [4, 395]:
-                print(l.what_did_id)
-                raise ValueError
+            assert int(l.what_did_id) in [4, 395]
             sources[l.name].append(l.lg_id)
 
     for s, roles in contributors.items():
@@ -141,7 +164,7 @@ def main(args):
         common.Contributor, 'bernardcomrie',
         id='bernardcomrie',
         name="Bernard Comrie",
-        address="Max Planck Institute for Evolutionary Anthropology, Leipzig")
+        address="University of California, Santa Barbara")
 
     for i, editor in enumerate(['maryritchiekey', 'bernardcomrie']):
         common.Editor(dataset=dataset, contributor=data['Contributor'][editor], ord=i + 1)
@@ -154,13 +177,12 @@ def main(args):
         for lg in lgs:
             if lg in exclude:
                 continue
-            try:
+            if lg in data['IdsLanguage']:
                 DBSession.add(common.LanguageSource(
                     language_pk=data['IdsLanguage'][lg].pk,
                     source_pk=data['Source'][name].pk))
-            except KeyError:
-                print(name, lgs)
-                continue
+            else:
+                assert not int(lg)
 
     altnames = {}
     for i, l in enumerate(read('alt_names')):
@@ -202,6 +224,8 @@ def main(args):
             data[entity][k] = data[entity][k].pk
 
     synsets = set()
+    counterparts = set()
+    problems = defaultdict(list)
 
     for lg_id, entries in groupby(
             sorted(read('ids'), key=lambda t: t.lg_id), lambda k: k.lg_id):
@@ -212,11 +236,7 @@ def main(args):
         transaction.commit()
         transaction.begin()
 
-        try:
-            language = common.Language.get(data['IdsLanguage'][lg_id])
-        except KeyError:
-            print(list(entries))
-            raise
+        language = common.Language.get(data['IdsLanguage'][lg_id])
         desc = data_desc.get(lg_id, {})
         words = defaultdict(list)
         for l in entries:
@@ -258,16 +278,29 @@ def main(args):
                         #print('===', language.id, language.name)
                         #print(l.data_1)
                         #print(l.data_2)
-                    #assert language.id == '238'  # Rapa Nui has problems!
+                    # 83 cases of misaligned transcriptions
                     trans2 = None
 
             for i, word in enumerate(trans1):
-                v = models.Counterpart(
-                    id=id_ + '-' + str(i + 1 + len(vs.values)),
-                    name=word,
-                    description=desc.get('1'),
-                    valueset=vs)
-                words[word].append((v, trans2[i] if trans2 else None))
+                cid = id_ + '-' + str(i + 1 + len(vs.values))
+                if cid not in counterparts:
+                    v = models.Counterpart(
+                        id=cid,
+                        name=word,
+                        description=desc.get('1'),
+                        valueset=vs)
+                    words[word].append((v, trans2[i] if trans2 else None))
+                    counterparts.add(cid)
+                else:
+                    print(cid)
+                    #12 - 420 - 811 - 3
+                    #5 - 390 - 818 - 3
+                    #2 - 930 - 819 - 3
+                    #2 - 930 - 819 - 3
+                    #3 - 120 - 819 - 3
+                    #10 - 140 - 822 - 3
+                    #9 - 160 - 825 - 3
+                    #2 - 430 - 829 - 4
 
         for i, form in enumerate(words.keys()):
             # Since we identify words based on their string representation, we have to
@@ -281,8 +314,7 @@ def main(args):
             try:
                 assert len(alt_names) <= 1
             except AssertionError:
-                print('---', language.id, language.name)
-                print(alt_names)
+                problems[(language.id, language.name)].append(alt_names)
             word = models.Word(
                 id='%s-%s' % (language.id, i + 1),
                 name=form,
@@ -299,6 +331,10 @@ def main(args):
 
     with dsv.UnicodeWriter(args.data_file('misaligned.csv')) as fp:
         fp.writerows(misaligned)
+
+    # about 250 cases where alternative transcriotions do not covary across meanings.
+    for k, v in problems.items():
+        print(k, len(v))
 
 
 def prime_cache(args):
