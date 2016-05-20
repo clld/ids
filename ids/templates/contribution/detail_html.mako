@@ -32,9 +32,9 @@
         ${h.format_coordinates(ctx.language)}
     </%util:well>
     % endif
-    % if ctx.language.sources:
+    % if ctx.references:
     <%util:well title="Sources">
-        ${util.sources_list(sorted(list(ctx.language.sources), key=lambda s: s.name))}
+        ${util.sources_list(sorted([a.source for a in ctx.references], key=lambda s: s.name))}
     </%util:well>
     % endif
 </%def>

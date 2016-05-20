@@ -4,14 +4,17 @@ import sys
 import re
 from itertools import groupby
 from collections import defaultdict
+from datetime import date
+
 import transaction
-
 from sqlalchemy import Index
+from sqlalchemy.orm import joinedload
 
-from clld.scripts.util import initializedb, Data
+from clld.scripts.util import initializedb, Data, bibtex2source
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.db.util import collkey, with_collkey_ddl
+from clld.lib.bibtex import Database
 from clldutils import dsv
 from clldutils.misc import slug, nfilter
 from clldutils.path import Path
@@ -19,6 +22,7 @@ from clld_glottologfamily_plugin.util import load_families
 from pyglottolog.api import Glottolog
 from pyglottolog.util import languoids_path
 from pyglottolog.languoids import walk_tree
+from concepticondata.api import Concepticon
 
 import ids
 from ids import models
@@ -64,11 +68,19 @@ def norm(f, desc, lid):
 with_collkey_ddl()
 GLOTTOLOG_REPOS = Path(ids.__file__).parent.parent.parent.parent.joinpath(
     'glottolog3', 'glottolog')
+CONCEPTICON_REPOS = Path(ids.__file__).parent.parent.parent.parent.joinpath(
+    'concepticon', 'concepticon-data')
 
 
 def main(args):
     Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     data = Data()
+    concept_list = Concepticon(CONCEPTICON_REPOS).conceptlist('Key-2016-1310')
+
+    def concepticon_id(ids_code):
+        for item in concept_list:
+            if item['IDS_ID'] == ids_code:
+                return int(item['CONCEPTICON_ID']) if item['CONCEPTICON_ID'] else None
 
     def read(table):
         fname = args.data_file(table + '.all.csv')
@@ -80,20 +92,26 @@ def main(args):
         id=ids.__name__,
         name="IDS",
         description="The Intercontinental Dictionary Series",
-        #published=date(2009, 8, 15),
+        published=date(2016, 5, 25),
         publisher_name="Max Planck Institute for Evolutionary Anthropology",
         publisher_place="Leipzig",
         publisher_url="http://www.eva.mpg.de",
-        license='http://creativecommons.org/licenses/by-nc-nd/2.0/de/deed.en',
-        contact='ids@eva.mpg.de',
+        license='http://creativecommons.org/licenses/by/4.0/',
+        contact='forkel@shh.mpg.de',
         jsondata={
-            'license_icon': 'http://i.creativecommons.org/l/by-nc-nd/2.0/de/88x31.png',
+            'license_icon': 'cc-by.png',
             'license_name':
-                'Creative Commons Attribution-NonCommercial-NoDerivs 2.0 Germany License',
+                'Creative Commons Attribution 4.0 International License',
         },
         domain='ids.clld.org')
 
     DBSession.add(dataset)
+
+    for rec in Database.from_file(args.data_file('sources.bib'), lowercase=True):
+        if rec.id not in data['Source']:
+            data.add(common.Source, rec.id, _obj=bibtex2source(rec))
+    DBSession.flush()
+
     data_desc = defaultdict(dict)
     for l in read('x_lg_data'):
         data_desc[l.lg_id][l.map_ids_data] = l.header
@@ -169,20 +187,22 @@ def main(args):
     for i, editor in enumerate(['maryritchiekey', 'bernardcomrie']):
         common.Editor(dataset=dataset, contributor=data['Contributor'][editor], ord=i + 1)
 
-    for i, name in enumerate(sorted(sources.keys())):
-        c = data.add(common.Source, name, id=str(i + 1), name=name, description=name)
+    #for i, name in enumerate(sorted(sources.keys())):
+    #    c = data.add(common.Source, name, id=str(i + 1), name=name, description=name)
 
     DBSession.flush()
     for name, lgs in sources.items():
-        for lg in lgs:
-            if lg in exclude:
-                continue
-            if lg in data['IdsLanguage']:
-                DBSession.add(common.LanguageSource(
-                    language_pk=data['IdsLanguage'][lg].pk,
-                    source_pk=data['Source'][name].pk))
-            else:
-                assert not int(lg)
+        for _src in name.split(';'):
+            src = data['Source'].get(_src.strip())
+            if not src:
+                print('-- missing source --', _src)
+                raise ValueError
+            for lg in lgs:
+                if lg in exclude:
+                    continue
+                assert lg in data['Dictionary']
+                DBSession.add(common.ContributionReference(
+                    contribution_pk=data['Dictionary'][lg].pk, source_pk=src.pk))
 
     altnames = {}
     for i, l in enumerate(read('alt_names')):
@@ -211,7 +231,11 @@ def main(args):
             name = name + ' (%s)' % entries[name]
         else:
             entries[name] = 1
-        kw = {'id': id_, 'name': name, 'chapter': data['Chapter'][l.chap_id]}
+        kw = {
+            'id': id_,
+            'name': name,
+            'concepticon_id': concepticon_id(id_),
+            'chapter': data['Chapter'][l.chap_id]}
         for ll in 'french russian spanish portugese'.split():
             kw[ll] = getattr(l, 'trans_' + ll)
         data.add(models.Entry, id_, sub_code=l.entry_id, **kw)
@@ -245,15 +269,16 @@ def main(args):
 
             entry_id = '%s-%s' % (l.chap_id, l.entry_id)
             if entry_id not in data['Entry']:
-                data.add(
-                    models.Entry, entry_id,
-                    id=entry_id,
-                    name=entry_id,
-                    #active=False,
-                    sub_code=l.entry_id,
-                    chapter_pk=data['Chapter'][l.chap_id])
-                DBSession.flush()
-                data['Entry'][entry_id] = data['Entry'][entry_id].pk
+                continue
+                #data.add(
+                #    models.Entry, entry_id,
+                #    id=entry_id,
+                #    name=entry_id,
+                #    concepticon_id=concepticon_id(entry_id),
+                #    sub_code=l.entry_id,
+                #    chapter_pk=data['Chapter'][l.chap_id])
+                #DBSession.flush()
+                #data['Entry'][entry_id] = data['Entry'][entry_id].pk
 
             id_ = '%s-%s' % (entry_id, l.lg_id)
             if id_ in synsets:
@@ -342,7 +367,11 @@ def prime_cache(args):
     This procedure should be separate from the db initialization, because
     it will have to be run periodiucally whenever data has been updated.
     """
-    # identify words:
+    for chapter in DBSession.query(models.Chapter).options(joinedload(models.Chapter.entries)):
+        chapter.count_entries = len(chapter.entries)
+
+    for entry in DBSession.query(models.Entry).options(joinedload(common.Parameter.valuesets)):
+        entry.representation = len(entry.valuesets)
 
 
 if __name__ == '__main__':

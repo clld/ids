@@ -3,7 +3,7 @@ from sqlalchemy.sql.expression import cast
 from sqlalchemy.orm import aliased, joinedload, joinedload_all, contains_eager
 
 from clld.web.datatables import Values
-from clld.web.datatables.base import Col, LinkCol, LinkToMapCol
+from clld.web.datatables.base import Col, LinkCol, LinkToMapCol, DataTable, IntegerIdCol
 from clld.web.datatables.contribution import Contributions, CitationCol
 from clld.web.datatables import contributor
 from clld.web.datatables.parameter import Parameters
@@ -12,10 +12,11 @@ from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
 from clld.db.util import collkey
 import clld.db.models.common
-from clld.db.models.common import ValueSet, Value, Language
+from clld.db.models.common import ValueSet, Value
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyCol
 
 from ids.models import Chapter, Entry, ROLES, Dictionary, IdsLanguage
+from ids.util import concepticon_link
 
 
 class IDSCodeCol(Col):
@@ -180,6 +181,13 @@ class Dictionaries(Contributions):
         return res
 
 
+class ConcepticonLinkCol(Col):
+    __kw__ = {'bSearchable': False, 'bSortable': False}
+
+    def format(self, item):
+        return concepticon_link(self.dt.req, item)
+
+
 class Entries(Parameters):
     __constraints__ = [Chapter]
 
@@ -199,10 +207,22 @@ class Entries(Parameters):
                 "about the meaning, as well as a list of all words that are counterparts "
                 "of that meaning."),
             ChapterCol(self, 'sf', sTitle='Chapter'),
+            Col(self, 'representation', model_col=Entry.representation),
+            ConcepticonLinkCol(self, 'concepticon'),
         ]))
 
 
+class Chapters(DataTable):
+    def col_defs(self):
+        return [
+            IntegerIdCol(self, 'id'),
+            LinkCol(self, 'name'),
+            Col(self, 'count_entries', sTitle='# Entries')
+        ]
+
+
 def includeme(config):
+    config.register_datatable('chapters', Chapters)
     config.register_datatable('values', Counterparts)
     config.register_datatable('contributors', Compilers)
     config.register_datatable('contributions', Dictionaries)

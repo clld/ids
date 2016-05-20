@@ -3,9 +3,13 @@
 <%! active_menu_item = "parameters" %>
 <%block name="title">${_('Parameter')} "${ctx.name}"</%block>
 
-<h2>Meaning ${ctx.id} "${ctx.name}"</h2>
+<h2>${_('Parameter')} ${ctx.id} "${ctx.name}"</h2>
 
-${util.dl_table(*[('chapter', ctx.chapter.id + ' ' + ctx.chapter.name)], **{k: getattr(ctx, k) for k in 'french russian spanish portugese'.split()})}
+<p>
+    Chapter ${ctx.chapter.id}: ${h.link(request, ctx.chapter)}
+</p>
+
+${util.dl_table(**{k: getattr(ctx, k) for k in 'french russian spanish portugese'.split()})}
 
 ${request.map.render()}
 

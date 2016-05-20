@@ -1,11 +1,12 @@
 from pyramid.config import Configurator
 
 from clld.web.adapters.base import adapter_factory
-from clld import interfaces
+from clld.interfaces import ILinkAttrs, IMapMarker, IContribution, IValue, ILanguage
 from clld_glottologfamily_plugin.util import LanguageByFamilyMapMarker
 
 # we must make sure custom models are known at database initialization!
 from ids import models
+from ids.interfaces import IChapter
 
 
 _ = lambda a: a
@@ -18,10 +19,10 @@ _('Values')
 
 
 def link_attrs(req, obj, **kw):
-    if interfaces.ILanguage.providedBy(obj):
+    if ILanguage.providedBy(obj):
         # we are about to link to a language details page: redirect to contribution page!
         kw['href'] = req.route_url('contribution', id=obj.id, **kw.pop('url_kw', {}))
-    if interfaces.IValue.providedBy(obj):
+    if IValue.providedBy(obj):
         # we are about to link to a value details page: redirect to valueset page!
         kw['href'] = req.resource_url(obj.valueset, **kw.pop('url_kw', {}))
     return kw
@@ -32,12 +33,13 @@ def main(global_config, **settings):
     """
     config = Configurator(settings=settings)
     config.include('clldmpg')
-    config.registry.registerUtility(LanguageByFamilyMapMarker(), interfaces.IMapMarker)
-    config.registry.registerUtility(link_attrs, interfaces.ILinkAttrs)
+    config.registry.registerUtility(LanguageByFamilyMapMarker(), IMapMarker)
+    config.registry.registerUtility(link_attrs, ILinkAttrs)
     config.register_adapter(adapter_factory(
         'contribution/detail_tab.mako',
         mimetype='application/vnd.clld.tab',
         send_mimetype="text/plain",
         extension='tab',
-        name='tab-separated values'), interfaces.IContribution)
+        name='tab-separated values'), IContribution)
+    config.register_resource('chapter', models.Chapter, IChapter, with_index=True)
     return config.make_wsgi_app()

@@ -17,6 +17,8 @@ from clld.db.models.common import (
 )
 from clld_glottologfamily_plugin.models import HasFamilyMixin
 
+from ids.interfaces import IChapter
+
 
 ROLES = OrderedDict()
 ROLES[2] = 'Author'
@@ -24,8 +26,9 @@ ROLES[3] = 'Consultant'
 ROLES[1] = 'Data Entry'
 
 
+@implementer(IChapter)
 class Chapter(Base, IdNameDescriptionMixin):
-    pass
+    count_entries = Column(Integer)
 
 
 @implementer(interfaces.IParameter)
@@ -34,11 +37,18 @@ class Entry(CustomModelMixin, Parameter):
     chapter_pk = Column(Integer, ForeignKey('chapter.pk'), nullable=False)
     chapter = relationship(Chapter, backref='entries')
     sub_code = Column(String)
+    concepticon_id = Column(Integer)
+    representation = Column(Integer)
 
     french = Column(Unicode)
     russian = Column(Unicode)
     spanish = Column(Unicode)
     portugese = Column(Unicode)
+
+    @property
+    def concepticon_url(self):
+        if self.concepticon_id:
+            return 'http://concepticon.clld.org/parameters/%s' % self.concepticon_id
 
 
 @implementer(interfaces.ILanguage)

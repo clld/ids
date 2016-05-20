@@ -9,7 +9,16 @@
     </%util:well>
 </%def>
 
-<h2>${ctx.description}</h2>
+<div style="text-align: center">
+<h1>${ctx.description}</h1>
+
+<p class="lead">
+    <em>Founding Editor:</em><br/>
+    †Mary Ritchie Key (University of California, Irvine)<br/>
+    <em>General Editor:</em><br/>
+    Bernard Comrie (University of California, Santa Barbara)
+</p>
+</div>
 
 <%util:section title="Purpose" id="Purpose" level="4">
     The Intercontinental Dictionary Series (IDS) is a database where lexical material across
@@ -59,20 +68,26 @@
     comparability. Comparative work in Indo-European has been carried on for over 200 years,
     and excellent research tools have been produced. This experience forms a basis for similar
     research tools to be produced for the pre-literate languages that have been more recently
-    recorded. Specifically, a model for IDS is A Dictionary of Selected Synonyms in the
-    Principal Indo-European Languages, compiled by Carl Darling Buck, University of Chicago
-    Press, 1949, 1515 pages. The dictionary is organized in a topical outline of 23 chapters.
+    recorded. Specifically, a model for IDS is <em>A Dictionary of Selected Synonyms in the
+    Principal Indo-European Languages</em>, compiled
+    ${h.link(request, buck1949, label="by Carl Darling Buck")}.
+    The dictionary is organized in a topical outline of
+    <a href="${request.route_url('chapters')}">${chapters} chapters</a>.
     The outline has been adapted for the IDS, with the numbering system generally maintained;
     and this remains the same for all the wordlists. Buck's dictionary contains approximately
     1200 potential entries (not complete for all languages, of course). The IDS adaptation
-    contains 1310 entries. If a form does not exist in a certain area of the world, the entry
+    contains
+        <a href="${request.route_url('parameters')}">${entries} entries</a>.
+    If a form does not exist in a certain area of the world, the entry
     is left blank. The entries are given with English as the first heading, and where
     appropriate the language(s) of the area alongside, for example, English, Portuguese, and
     Spanish for indigenous languages of South America.
 </%util:section>
 
 <%util:section title="Authors" id="Authors" level="4">
-    Each wordlist is the responsibility of an individual author or team of authors. The actual
+    Each wordlist is the responsibility of an individual
+    <a href="${request.route_url('contributors')}">author or team of authors</a>.
+    The actual
     contributors of language data, the consultants, generally have a high level of fieldwork
     experience in the language, and are often native speakers of the languages recorded. Much
     of the data being entered into the dictionary is from unpublished field notes, which
@@ -84,9 +99,14 @@
 
 <%util:section title="Choice of Languages" id="Languages" level="4">
     Ideally, the coverage would be comprehensive, but practical consideration has had to be
-    given to: availability of publications and fieldwork; comparative work done; coordination
-    with other research; contacts and cooperation of personnel and their expertise. Each
-    language that has been entered has been corrected and supported by linguistic experts,
+    given to:
+        <ul>
+            <li>availability of publications and fieldwork;</li>
+            <li>comparative work done;</li>
+            <li>coordination with other research;</li>
+            <li>contacts and cooperation of personnel and their expertise.</li>
+        </ul>
+    Each language that has been entered has been corrected and supported by linguistic experts,
     who were consulted regularly.
 </%util:section>
 
@@ -145,8 +165,10 @@
 </%util:section>
 
 <%util:section title="Reference" id="Reference" level="4">
+    <blockquote>
     Borin, Lars & Comrie, Bernard & Saxena, Anju. 2013.
     The Intercontinental Dictionary Series: A rich and principled database for language comparison.
     In Borin, Lars & Saxena, Anju (eds.). Approaches to measuring linguistic differences, 285-302.
     (Trends in Linguistics, 265.) Berlin: De Gruyter Mouton.
+    </blockquote>
 </%util:section>

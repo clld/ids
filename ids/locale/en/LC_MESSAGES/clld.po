@@ -27,11 +27,11 @@ msgstr "Dictionaries"
 
 #: ids/__init__.py:14
 msgid "Parameter"
-msgstr "Meaning"
+msgstr "Entry"
 
 #: ids/__init__.py:15
 msgid "Parameters"
-msgstr "Meanings"
+msgstr "Entries"
 
 #: ids/__init__.py:16
 msgid "Value"
