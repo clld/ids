@@ -14,9 +14,9 @@
 
 <p class="lead">
     <em>Founding Editor:</em><br/>
-    †Mary Ritchie Key (University of California, Irvine)<br/>
+    †Mary Ritchie Key<br/>
     <em>General Editor:</em><br/>
-    Bernard Comrie (University of California, Santa Barbara)
+    Bernard Comrie
 </p>
 </div>
 
@@ -24,7 +24,8 @@
     The Intercontinental Dictionary Series (IDS) is a database where lexical material across
     the languages of the world is organized in such a way that comparisons can be made.
     Historical and comparative studies and theoretical linguistic research can be based on
-    this documentation. The IDS was conceived of by Mary Ritchie Key in the 1980s as a
+    this documentation. The IDS was conceived of by Mary Ritchie Key (University of
+    California, Irvine) in the 1980s as a
     long-term cooperative project that will go on for the next generation or so and will
     involve linguists all over the world. It is aimed towards international understanding
     and cooperation. This is a pioneering effort that will have global impact. The purpose
@@ -143,7 +144,9 @@
     skills and willingness to give time and thought to the objectives of the dictionary series.
     In 1984, an award from the University of California, Irvine Faculty Research Committee to
     launch the Intercontinental Dictionary Series set the series on its way. In 1990, the IDS
-    won an Honorable Mention from the Rolex Awards for Enterprise.
+    won an Honorable Mention from the Rolex Awards for Enterprise
+    In 1998, Bernard Comrie took over from Mary Ritchie Key and continued to develop IDS
+    at the Max Planck Institute for Evolutionary Anthropology in Leipzig.
 </%util:section>
 
 <%util:section title="Further Possibilities" id="Possibilities" level="4">
@@ -158,7 +161,8 @@
 </%util:section>
 
 <%util:section title="Acknowledgments" id="Acknowledgments" level="4">
-    Bernard Comrie wishes to acknowledge the support of the Max Planck Society (especially
+    Bernard Comrie (University of California, Santa Barbara) wishes to acknowledge the
+    support of the Max Planck Society (especially
     through the Max Planck Institute for Evolutionary Anthropology) in updating and expanding
     the IDS, and of Mary Ritchie Key for a generous grant that enabled the collection of IDS
     lists for Tai-Kadai and Mon-Khmer languages of Southeast Asia.
