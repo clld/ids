@@ -150,6 +150,14 @@ class ContributorCol(Col):
               for ca in item.contributor_assocs if ca.ord == self.roleid])
 
 
+class IdsFamilyCol(FamilyCol):
+    def format(self, item):
+        item_ = self.get_obj(item)
+        if not item_.glottocode:
+            return ''
+        return FamilyCol.format(self, item)
+
+
 class Dictionaries(Contributions):
     def __init__(self, *args, **kw):
         Contributions.__init__(self, *args, **kw)
@@ -173,7 +181,7 @@ class Dictionaries(Contributions):
             LinkCol(self, 'name'),
             LinkToMapCol(self, 'm', get_object=lambda i: i.language),
             MacroareaCol(self, 'macroarea', get_object=lambda i: i.language, language_cls=IdsLanguage),
-            FamilyCol(self, 'family', get_object=lambda i: i.language, language_cls=IdsLanguage),
+            IdsFamilyCol(self, 'family', get_object=lambda i: i.language, language_cls=IdsLanguage),
         ]
         for roleid in ROLES.keys():
             res.append(ContributorCol(self, 'role%s' % roleid, roleid))
