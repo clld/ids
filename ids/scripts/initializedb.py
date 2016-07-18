@@ -43,7 +43,7 @@ def get_string(s):
 def split_counterparts(c):
     for word in re.split('\s*(?:,|;)\s*', c):
         word = word.strip()
-        if word:
+        if word and word not in ['—', '––']:
             yield word
 
 
