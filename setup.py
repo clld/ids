@@ -19,7 +19,8 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'clld>=2.2.2',
+        'clld>=3.2.4',
+        'clldutils>=1.9',
         'clldmpg>=2.0.0',
         'clld-glottologfamily-plugin>=1.3',
         'pycldf>=0.3.0',
