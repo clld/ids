@@ -1,40 +1,31 @@
-from clldutils.path import Path
-from clld.tests.util import TestWithApp
+import pytest
 
-import ids
+pytest_plugins = ['clld']
 
 
-class Tests(TestWithApp):
-    __cfg__ = Path(ids.__file__).parent.joinpath('..', 'development.ini').resolve()
-    __setup_db__ = False
-
-    def test_home(self):
-        self.app.get_html('/')
-
-    def test_contribution(self):
-        self.app.get_html('/contributions')
-        self.app.get_html('/contributions/500')
-        self.app.get_html('/contributions.geojson')
-        self.app.get_dt('/contributions')
-        self.app.get_dt('/languages')
-        self.app.get_html('/contributions/215')
-        self.app.get_dt('/values?contribution=220&iSortingCols=1&iSortCol_0=0')
-        self.app.get_dt('/values?contribution=220&iSortingCols=1&iSortCol_0=2')
-        self.app.get_dt('/values?contribution=220&sSearch_0=1&sSearch_2=4')
-
-    def test_contributor(self):
-        self.app.get_html('/contributors')
-        self.app.get_dt('/contributors')
-
-    def test_parameter(self):
-        self.app.get_html('/parameters')
-        r = self.app.get_dt('/parameters')
-        assert r 
-        self.app.get_dt('/parameters?chapter=1')
-        self.app.get_html('/parameters/1-222')
-        self.app.get_json('/parameters/1-222.geojson')
-        self.app.get_dt('/values?parameter=1-222')
-
-    def test_language(self):
-        self.app.get_html('/languages/182.snippet.html')
-        self.app.get_html('/languages/128.snippet.html?parameter=962')
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ('get_html', '/'),
+        ('get_html', '/contributions'),
+        ('get_html', '/contributions/500'),
+        ('get_html', '/contributions.geojson'),
+        ('get_dt', '/contributions'),
+        ('get_dt', '/languages'),
+        ('get_html', '/contributions/215'),
+        ('get_dt', '/values?contribution=220&iSortingCols=1&iSortCol_0=0'),
+        ('get_dt', '/values?contribution=220&iSortingCols=1&iSortCol_0=2'),
+        ('get_dt', '/values?contribution=220&sSearch_0=1&sSearch_2=4'),
+        ('get_html', '/contributors'),
+        ('get_dt', '/contributors'),
+        ('get_html', '/parameters'),
+        ('get_dt', '/parameters'),
+        ('get_dt', '/parameters?chapter=1'),
+        ('get_html', '/parameters/1-222'),
+        ('get_json', '/parameters/1-222.geojson'),
+        ('get_dt', '/values?parameter=1-222'),
+        ('get_html', '/languages/182.snippet.html'),
+        ('get_html', '/languages/128.snippet.html?parameter=962'),
+    ])
+def test_pages(app, method, path):
+    getattr(app, method)(path)
