@@ -3,15 +3,15 @@
         "bitstreams": [
             {
                 "last-modified": 1516218189703,
-                "checksum": "f3cae525bb1cd246747e6b1c67c0ea65",
+                "checksum": "720ba64b297f440c816ee99dbd096276",
                 "created": 1516218189038,
                 "checksum-algorithm": "MD5",
                 "bitstreamid": "ids_dataset.cldf.zip",
-                "filesize": 9184372,
+                "filesize": 6391965,
                 "content-type": "application/zip"
             }
         ],
-        "oid": "EAEA0-1575-B9D3-4DAF-0",
+        "oid": "EAEA0-0971-164A-1809-0",
         "metadata": {
             "title": "ids 2018 - downloads",
             "creator": "pycdstar"
