@@ -2,19 +2,19 @@
     "2018": {
         "bitstreams": [
             {
-                "last-modified": 1516218189703,
-                "checksum": "720ba64b297f440c816ee99dbd096276",
-                "created": 1516218189038,
-                "checksum-algorithm": "MD5",
+                "created": 1524167389518,
+                "checksum": "1d2cbbee1e2413872b3a6cae95047108",
                 "bitstreamid": "ids_dataset.cldf.zip",
-                "filesize": 6391965,
+                "checksum-algorithm": "MD5",
+                "last-modified": 1524167389678,
+                "filesize": 6575326,
                 "content-type": "application/zip"
             }
         ],
-        "oid": "EAEA0-0971-164A-1809-0",
+        "oid": "EAEA0-5F01-8AAF-CDED-0",
         "metadata": {
-            "title": "ids 2018 - downloads",
-            "creator": "pycdstar"
+            "creator": "pycdstar",
+            "title": "ids 2018 - downloads"
         }
     }
 }

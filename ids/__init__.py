@@ -31,6 +31,7 @@ class IDSCldfConfig(CldfConfig):
             res['transcription'] = item.word.description
             res['alt_form'] = item.word.alt_name
             res['alt_transcription'] = item.word.alt_description
+            res['Source'] = [r.source.id for r in item.valueset.contribution.references]
         if model == Parameter:
             res['Concepticon_ID'] = item.concepticon_id
         return res
