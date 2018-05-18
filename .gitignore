@@ -1,6 +1,7 @@
 data
 .eggs
 *.py[cod]
+geckodriver.log
 
 # C extensions
 *.so
@@ -23,6 +24,7 @@ __pycache__
 pip-log.txt
 
 # Unit test / coverage reports
+.pytest_cache
 .coverage
 .tox
 nosetests.xml
