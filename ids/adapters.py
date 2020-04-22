@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from clld.db.meta import DBSession
 from clld.db.models.common import Language
 from clld.web.adapters.geojson import GeoJsonParameter, GeoJsonLanguages

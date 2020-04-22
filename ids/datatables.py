@@ -1,6 +1,6 @@
 from sqlalchemy import Integer
 from sqlalchemy.sql.expression import cast
-from sqlalchemy.orm import aliased, joinedload, joinedload_all, contains_eager
+from sqlalchemy.orm import aliased, joinedload, contains_eager
 
 from clld.web.datatables import Values
 from clld.web.datatables.base import Col, LinkCol, LinkToMapCol, DataTable, IntegerIdCol
@@ -65,8 +65,9 @@ class Counterparts(Values):
             query = DBSession.query(Value).join(ValueSet)\
                 .join(ValueSet.language)\
                 .join(ValueSet.parameter)\
-                .options(joinedload_all(Value.valueset, ValueSet.language),
-                         joinedload(Value.valueset, ValueSet.parameter))
+                .options(
+                    joinedload(Value.valueset).joinedload(ValueSet.language),
+                    joinedload(Value.valueset, ValueSet.parameter))
         return query
 
     def col_defs(self):

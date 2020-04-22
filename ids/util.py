@@ -1,6 +1,3 @@
-# coding: utf8
-from __future__ import unicode_literals, print_function, division
-
 from clld.db.meta import DBSession
 from clld.db.models.common import Source, Parameter
 from clld.web.util.helpers import get_referents
