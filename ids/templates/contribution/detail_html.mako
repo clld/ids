@@ -2,6 +2,7 @@
 <%namespace name="util" file="../util.mako"/>
 <%! from ids.models import ROLES %>
 <%! active_menu_item = "contributions" %>
+<%block name="title">${ctx.name}</%block>
 
 <%def name="sidebar()">
     <div style="margin-top: 5px;">
@@ -13,7 +14,7 @@
         % for id, label in ROLES.items():
             <% contribs = [ca.contributor for ca in ctx.contributor_assocs if ca.ord == id] %>
             % if contribs:
-            <dt>${label}</dt>
+            <dt>${label[0]}</dt>
             <dd>
                 <ul${' class="unstyled"' if len(contribs) == 1 else ''|n}>
                 % for c in contribs:

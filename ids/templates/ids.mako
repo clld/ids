@@ -1,5 +1,5 @@
 <%inherit file="app.mako"/>
-
+<%block name="title">${_('Home')}</%block>
 ##
 ## define app-level blocks:
 ##

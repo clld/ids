@@ -9,7 +9,7 @@
     Chapter ${ctx.chapter.id}: ${h.link(request, ctx.chapter)}
 </p>
 
-${util.dl_table(**{k: getattr(ctx, k) for k in 'french russian spanish portugese'.split()})}
+${util.dl_table(**{k.title(): getattr(ctx, k) for k in 'french russian spanish portuguese'.split()})}
 
 ${request.map.render()}
 

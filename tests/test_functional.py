@@ -24,6 +24,14 @@ import pytest
         ('get_dt', '/values?parameter=1-222'),
         ('get_html', '/languages/182.snippet.html'),
         ('get_html', '/languages/128.snippet.html?parameter=962'),
+        ('get_html', '/sources'),
+        ('get_html', '/sources/ainsworth1923'),
+        ('get_html', '/sources/ainsworth1923.snippet.html'),
+        ('get_html', '/valuesets/1-210-234'),
+        ('get_html', '/values'),
+        ('get_html', '/contributions'),
+        ('get_html', '/contributors?sSearch_1=Consultant'),
+        ('get_html', '/chapters'),
     ])
 def test_pages(app, method, path):
     getattr(app, method)(path)
