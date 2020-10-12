@@ -1,8 +1,8 @@
 from sqlalchemy import Integer
-from sqlalchemy.sql.expression import cast
+from sqlalchemy.sql.expression import cast, func
 from sqlalchemy.orm import aliased, joinedload, contains_eager
 
-from clld.web.datatables import Values
+from clld.web.datatables import Values, Sources
 from clld.web.datatables.base import Col, LinkCol, LinkToMapCol, DataTable, IntegerIdCol
 from clld.web.datatables.contribution import Contributions, CitationCol
 from clld.web.datatables import contributor
@@ -14,6 +14,7 @@ from clld.db.util import collkey
 import clld.db.models.common
 from clld.db.models.common import ValueSet, Value
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyCol
+from clld_glottologfamily_plugin.models import Family
 
 from ids.models import Chapter, Entry, ROLES, Dictionary, IdsLanguage
 from ids.util import concepticon_link
@@ -53,22 +54,34 @@ class ChapterCol(Col):
 
 class FormCol(LinkCol):
     def order(self):
-        return collkey(Value.name)
+        return collkey(func.replace(func.replace(Value.name, '`', ''), 'ː', ''))
 
 
 class Counterparts(Values):
     """Lists of counterparts
     """
+    def get_options(self):
+        opts = super(Values, self).get_options()
+        if self.parameter:
+            opts["aaSorting"] = [[2, "asc"], [1, "asc"]]
+        elif self.contribution:
+            opts["aaSorting"] = [[0, "asc"]]
+        else:
+            opts["aaSorting"] = [[0, "asc"], [4, "asc"], [3, "asc"]]
+        return opts
+
     def base_query(self, query):
         query = Values.base_query(self, query)
-        if not self.parameter and not self.language and not self.contribution:
-            query = DBSession.query(Value).join(ValueSet)\
+        if not self.language and not self.contribution and not self.parameter:
+            return DBSession.query(Value).join(ValueSet)\
                 .join(ValueSet.language)\
                 .join(ValueSet.parameter)\
-                .options(
-                    joinedload(Value.valueset).joinedload(ValueSet.language),
-                    joinedload(Value.valueset, ValueSet.parameter))
-        return query
+                .join(Family, isouter=True)\
+                .options(joinedload(Value.valueset).joinedload(ValueSet.language),
+                         joinedload(Value.valueset, ValueSet.parameter))
+        if self.contribution:
+            return query
+        return query.join(Family, isouter=True)
 
     def col_defs(self):
         lang = lambda i: i.valueset.language
@@ -80,6 +93,10 @@ class Counterparts(Values):
                     self, 'language',
                     model_col=clld.db.models.common.Language.name,
                     get_object=lang),
+                IdsFamilyCol(
+                    self, 'family',
+                    language_cls=IdsLanguage,
+                    get_object=lambda i: i.valueset.language),
             ]
         elif self.language or self.contribution:
             res = [
@@ -107,6 +124,10 @@ class Counterparts(Values):
                     self, 'language',
                     model_col=clld.db.models.common.Language.name,
                     get_object=lang),
+                IdsFamilyCol(
+                    self, 'family',
+                    language_cls=IdsLanguage,
+                    get_object=lambda i: i.valueset.language),
             ]
         res.extend([
             FormCol(
@@ -119,10 +140,14 @@ class Counterparts(Values):
 
 
 class RoleCol(Col):
-    __kw__ = {'choices': list(ROLES.items()), 'sClass': 'left'}
+    __kw__ = {'choices': sorted([r[0] for r in ROLES.values()]), 'sClass': 'left'}
 
     def format(self, item):
-        return ROLES[item.ord]
+        return ROLES[item.ord][0]
+
+    def search(self, qs):
+        ROLE_MAP = {v[0]: k for k, v in ROLES.items()}
+        return self.model_col == ROLE_MAP[qs]
 
 
 class Compilers(contributor.Contributors):
@@ -141,7 +166,7 @@ class ContributorCol(Col):
     __kw__ = {'bSortable': False, 'bSearchable': False}
 
     def __init__(self, dt, name, roleid, **kw):
-        kw['sTitle'] = ROLES[roleid]
+        kw['sTitle'] = ROLES[roleid][0]
         Col.__init__(self, dt, name, **kw)
         self.roleid = roleid
 
@@ -163,7 +188,7 @@ class Dictionaries(Contributions):
     def __init__(self, *args, **kw):
         Contributions.__init__(self, *args, **kw)
         self.roles = {}
-        for roleid in ROLES:
+        for roleid in ROLES.keys():
             self.roles[roleid] = aliased(clld.db.models.common.ContributionContributor, name='role%s' % roleid)
 
     def base_query(self, query):
@@ -221,6 +246,13 @@ class Entries(Parameters):
         ]))
 
 
+class IDSSources(Sources):
+    def get_options(self):
+        opts = super(Sources, self).get_options()
+        opts["aaSorting"] = [[1, "asc"]]
+        return opts
+
+
 class Chapters(DataTable):
     def col_defs(self):
         return [
@@ -236,3 +268,4 @@ def includeme(config):
     config.register_datatable('contributors', Compilers)
     config.register_datatable('contributions', Dictionaries)
     config.register_datatable('parameters', Entries)
+    config.register_datatable('sources', IDSSources)
