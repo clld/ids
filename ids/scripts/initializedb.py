@@ -19,22 +19,11 @@ from clldutils.path import Path
 from clld_glottologfamily_plugin.util import load_families
 from pyglottolog.api import Glottolog
 from pyconcepticon.api import Concepticon
-from pycldf.dataset import Wordlist
+from pycldf.dataset import Wordlist, iter_datasets
 
 import ids
 from ids import models
 
-
-data_path = Path(ids.__file__).parent.parent.parent.parent / 'intercontinental-dictionary-series'
-DATA_SET_PATHS = [
-    data_path / 'ids' / 'cldf',  # default data set
-    data_path / 'lindseyende' / 'cldf',  # additional ones
-    data_path / 'cosgrovevoro' / 'cldf',  # additional ones
-    data_path / 'spagnolmaltese' / 'cldf',  # additional ones
-]
-
-GLOTTOLOG_REPOS = data_path.parent / 'cldf' / 'glottolog')
-CONCEPTICON_REPOS = data_path.parent / 'cldf' / 'concepticon')
 
 CONCEPT_LIST = 'Key-2016-1310'
 
@@ -42,12 +31,33 @@ with_collkey_ddl()
 
 
 def main(args):
+    assert args.glottolog, 'The --glottolog option is required!'
+    assert args.concepticon, 'The --concepticon option is required!'
+    data_set_path = input('Path to IDS cldf datasets:') or\
+        Path(ids.__file__).parent.parent.parent.parent / 'intercontinental-dictionary-series'
+
+    ids_datasets, main_ids_found = [], False
+    for ds in iter_datasets(data_set_path):
+        try:
+            if ds.properties.get('dc:format', [])[0].endswith(CONCEPT_LIST):
+                if ds.properties.get('rdf:ID', '') == 'ids':
+                    # general IDS dataset must be first item
+                    ids_datasets.insert(0, ds)
+                    main_ids_found = True
+                else:
+                    ids_datasets.append(ds)
+        except IndexError:
+            continue
+
+    assert ids_datasets, 'No valid IDS datasets found'
+    assert main_ids_found, 'No main IDS dataset found'
+
     Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     data = Data()
 
     concept_list = {c.concepticon_id: c
                     for k, c in
-                    Concepticon(CONCEPTICON_REPOS).conceptlists[CONCEPT_LIST].concepts.items()}
+                    Concepticon(args.concepticon).conceptlists[CONCEPT_LIST].concepts.items()}
 
     dataset = common.Dataset(
         id=ids.__name__,
@@ -67,9 +77,8 @@ def main(args):
         domain='ids.clld.org')
 
     DBSession.add(dataset)
-
-    for ads in DATA_SET_PATHS:
-        for rec in Database.from_file(ads / 'sources.bib', lowercase=True):
+    for ds in ids_datasets:
+        for rec in Database.from_file(ds.bibpath, lowercase=True):
             if rec.id not in data['Source']:
                 data.add(
                     common.Source,
@@ -82,8 +91,8 @@ def main(args):
     languages = []
     altnames = {}
 
-    for ads in DATA_SET_PATHS:
-        for lg in Wordlist.from_metadata(ads / 'cldf-metadata.json')["LanguageTable"]:
+    for ads in ids_datasets:
+        for lg in ads["LanguageTable"]:
             lang = data.add(
                 models.IdsLanguage,
                 lg['ID'],
@@ -127,7 +136,7 @@ def main(args):
     load_families(
         Data(),
         languages,
-        glottolog_repos=GLOTTOLOG_REPOS,
+        glottolog_repos=args.glottolog,
         strict=False,
         isolates_icon='tcccccc',
     )
@@ -169,9 +178,8 @@ def main(args):
     for i, editor in enumerate(['maryritchiekey', 'bernardcomrie']):
         common.Editor(dataset=dataset, contributor=data['Contributor'][editor], ord=i + 1)
 
-    ds = Wordlist.from_metadata(DATA_SET_PATHS[0] / 'cldf-metadata.json')
     # Chapters
-    for c in ds["chapters.csv"]:
+    for c in ids_datasets[0]["chapters.csv"]:
         data.add(
             models.Chapter,
             c['ID'],
@@ -179,7 +187,7 @@ def main(args):
             name=c['Description']
         )
 
-    for p in ds["ParameterTable"]:
+    for p in ids_datasets[0]["ParameterTable"]:
         chap_id, sub_id = p['ID'].split('-')
         data.add(
             models.Entry,
@@ -207,8 +215,7 @@ def main(args):
     cnt = 0
     lenlg = len(data['IdsLanguage'])
 
-    for ads in DATA_SET_PATHS:
-        ds = Wordlist.from_metadata(ads / 'cldf-metadata.json')
+    for ds in ids_datasets:
         for lg_id, entries in groupby(
                 sorted(ds["FormTable"], key=lambda t: t['Language_ID']),
                 lambda k: k['Language_ID']):
