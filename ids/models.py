@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from zope.interface import implementer
 from sqlalchemy import (
     Column,
@@ -20,10 +18,12 @@ from clld_glottologfamily_plugin.models import HasFamilyMixin
 from ids.interfaces import IChapter
 
 
-ROLES = OrderedDict()
-ROLES[2] = 'Author'
-ROLES[3] = 'Consultant'
-ROLES[1] = 'Data Entry'
+ROLES = {
+    # tuples of ('human readable header', 'column header in languages.csv')
+    2: ('Author', 'Authors'),
+    3: ('Consultant', 'Consultants'),
+    1: ('Data Entry', 'DataEntry'),
+}
 
 
 @implementer(IChapter)
@@ -43,7 +43,7 @@ class Entry(CustomModelMixin, Parameter):
     french = Column(Unicode)
     russian = Column(Unicode)
     spanish = Column(Unicode)
-    portugese = Column(Unicode)
+    portuguese = Column(Unicode)
 
     @property
     def concepticon_url(self):
@@ -83,6 +83,9 @@ class Counterpart(CustomModelMixin, Value):
     word_pk = Column(Integer, ForeignKey('unit.pk'))
     word = relationship(Word, backref='counterparts')
 
+    org_value = Column(Unicode)
+    comment = Column(Unicode)
+
 
 @implementer(interfaces.IValueSet)
 class Synset(CustomModelMixin, ValueSet):
@@ -91,4 +94,3 @@ class Synset(CustomModelMixin, ValueSet):
     pk = Column(Integer, ForeignKey('valueset.pk'), primary_key=True)
 
     alt_representation = Column(Unicode)
-    comment = Column(Unicode)
