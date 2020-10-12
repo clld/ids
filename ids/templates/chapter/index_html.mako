@@ -2,6 +2,7 @@
 <%namespace name="util" file="../util.mako"/>
 <%! from ids.models import Chapter %>
 <%! active_menu_item = "chapters" %>
+<%block name="title">${_('Chapters')}</%block>
 
 <h2>Chapters</h2>
 
