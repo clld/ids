@@ -1,13 +1,12 @@
-import sys
 import unicodedata
 from itertools import groupby
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from datetime import date
-from csvw import dsv
 
 import transaction
 from sqlalchemy import Index
 from sqlalchemy.orm import joinedload
+from tqdm import tqdm
 
 from clld.cliutil import Data, bibtex2source
 from clld.db.meta import DBSession
@@ -17,7 +16,6 @@ from clld.lib.bibtex import Database
 from clldutils.misc import slug, nfilter
 from clldutils.path import Path
 from clld_glottologfamily_plugin.util import load_families
-from pyglottolog.api import Glottolog
 from pyconcepticon.api import Concepticon
 from pycldf.dataset import Wordlist, iter_datasets
 
@@ -27,37 +25,29 @@ from ids import models
 
 CONCEPT_LIST = 'Key-2016-1310'
 
+EDITORS = OrderedDict([
+    ('maryritchiekey', ("Mary Ritchie Key", "University of California, Irvine")),
+    ('bernardcomrie', ("Bernard Comrie", "University of California, Santa Barbara")),
+])
 with_collkey_ddl()
 
 
 def main(args):
+    data_set_path = input('Path to IDS cldf datasets:') or \
+                    Path(ids.__file__).parent.parent.parent.parent / 'intercontinental-dictionary-series'
+    ids_datasets = sorted(
+        [ds for ds in iter_datasets(data_set_path)
+         if ds.properties.get('dc:format', ['x'])[0].endswith(CONCEPT_LIST)],
+        key=lambda d: (d.properties.get('rdf:ID') != 'ids', d.properties.get('rdf:ID')))
+    assert ids_datasets and ids_datasets[0].properties['rdf:ID'] == 'ids', 'invalid ds directory'
     assert args.glottolog, 'The --glottolog option is required!'
     assert args.concepticon, 'The --concepticon option is required!'
-    data_set_path = input('Path to IDS cldf datasets:') or\
-        Path(ids.__file__).parent.parent.parent.parent / 'intercontinental-dictionary-series'
-
-    ids_datasets, main_ids_found = [], False
-    for ds in iter_datasets(data_set_path):
-        try:
-            if ds.properties.get('dc:format', [])[0].endswith(CONCEPT_LIST):
-                if ds.properties.get('rdf:ID', '') == 'ids':
-                    # general IDS dataset must be first item
-                    ids_datasets.insert(0, ds)
-                    main_ids_found = True
-                else:
-                    ids_datasets.append(ds)
-        except IndexError:
-            continue
-
-    assert ids_datasets, 'No valid IDS datasets found'
-    assert main_ids_found, 'No main IDS dataset found'
 
     Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     data = Data()
-
-    concept_list = {c.concepticon_id: c
-                    for k, c in
-                    Concepticon(args.concepticon).conceptlists[CONCEPT_LIST].concepts.items()}
+    concept_list = {
+        c.concepticon_id: c
+        for c in Concepticon(args.concepticon).conceptlists[CONCEPT_LIST].concepts.values()}
 
     dataset = common.Dataset(
         id=ids.__name__,
@@ -80,11 +70,7 @@ def main(args):
     for ds in ids_datasets:
         for rec in Database.from_file(ds.bibpath, lowercase=True):
             if rec.id not in data['Source']:
-                data.add(
-                    common.Source,
-                    rec.id,
-                    _obj=bibtex2source(rec)
-                )
+                data.add(common.Source, rec.id, _obj=bibtex2source(rec))
     DBSession.flush()
 
     contributors = defaultdict(list)
@@ -144,10 +130,8 @@ def main(args):
     for s, roles in contributors.items():
         name = roles[0][0]
         c = data.add(common.Contributor, s, id=s, name=name)
-        if name == 'Mary Ritchie Key':
-            c.address = 'University of California, Irvine'
-        if name == 'Bernard Comrie':
-            c.address = 'University of California, Santa Barbara'
+        if s in EDITORS:
+            c.address = EDITORS[s][1]
         for lg, specs in groupby(sorted(roles, key=lambda r: r[2]), key=lambda r: r[2]):
             sroles = sorted(
                 [s[1] for s in specs],
@@ -160,32 +144,14 @@ def main(args):
                 ord=what,
                 primary=what == 2))
 
-    if 'bernardcomrie' not in contributors:
-        data.add(
-            common.Contributor, 'bernardcomrie',
-            id='bernardcomrie',
-            name="Bernard Comrie",
-            address="University of California, Santa Barbara"
-        )
-    if 'maryritchiekey' not in contributors:
-        data.add(
-            common.Contributor, 'maryritchiekey',
-            id='maryritchiekey',
-            name="Mary Ritchie Key",
-            address="University of California, Irvine"
-        )
+    for i, (sid, (name, address)) in enumerate(EDITORS.items()):
+        c = data['Contributor'].get(sid)
+        if not c:
+            c = data.add(common.Contributor, sid, id=sid, name=name, address=address)
+        common.Editor(dataset=dataset, contributor=c, ord=i + 1)
 
-    for i, editor in enumerate(['maryritchiekey', 'bernardcomrie']):
-        common.Editor(dataset=dataset, contributor=data['Contributor'][editor], ord=i + 1)
-
-    # Chapters
     for c in ids_datasets[0]["chapters.csv"]:
-        data.add(
-            models.Chapter,
-            c['ID'],
-            id=c['ID'],
-            name=c['Description']
-        )
+        data.add(models.Chapter, c['ID'], id=c['ID'], name=c['Description'])
 
     for p in ids_datasets[0]["ParameterTable"]:
         chap_id, sub_id = p['ID'].split('-')
@@ -212,24 +178,18 @@ def main(args):
     counterparts = {}
     problems = defaultdict(list)
 
-    cnt = 0
-    lenlg = len(data['IdsLanguage'])
-
     for ds in ids_datasets:
-        for lg_id, entries in groupby(
+        for lg_id, entries in tqdm(
+            groupby(
                 sorted(ds["FormTable"], key=lambda t: t['Language_ID']),
-                lambda k: k['Language_ID']):
-
+                lambda k: k['Language_ID']),
+            desc='Loading words per dictionary in {}'.format(ds.properties.get('rdf:ID'))
+        ):
             # keep the memory footprint reasonable
             transaction.commit()
             transaction.begin()
 
             language = common.Language.get(data['IdsLanguage'][lg_id])
-
-            cnt += 1
-            print("  processing {0} ({1}/{2}){3}".format(
-                language.name, cnt, lenlg, ' ' * 45), end='\r', flush=True)
-
             words = defaultdict(list)
             alt_repr, desc = '', ''
             for i, e in enumerate(entries):
@@ -242,12 +202,9 @@ def main(args):
                     if e['Source']:
                         for s in e['Source']:
                             DBSession.add(common.ContributionReference(
-                                contribution_pk=language.pk,
-                                source_pk=data['Source'][s])
-                            )
+                                contribution_pk=language.pk, source_pk=data['Source'][s]))
 
                 entry_id = e['Parameter_ID']
-
                 id_ = '{0}-{1}'.format(entry_id, e['Language_ID'])
                 try:
                     _ = synsets[id_]
@@ -262,8 +219,8 @@ def main(args):
                     synsets[id_] = None
 
                 word = e['Form']
-                cid = '{0}-{1}'.format(id_, str(
-                                    int(e['ID'].split('-')[-1]) + 1 + len(vs.values)))
+                cid = '{0}-{1}'.format(
+                    id_, str(int(e['ID'].split('-')[-1]) + 1 + len(vs.values)))
                 try:
                     _ = counterparts[cid]
                 except KeyError:
@@ -305,11 +262,10 @@ def main(args):
 
             DBSession.flush()
 
-    print()
-    if len(problems):
-        print("=== Problems ===")
-        for k, v in problems.items():
-            print(k, v)
+    #if len(problems):
+    #    print("=== Problems ===")
+    #    for k, v in problems.items():
+    #        print(k, v)
 
 
 def prime_cache(args):
@@ -322,8 +278,3 @@ def prime_cache(args):
 
     for entry in DBSession.query(models.Entry).options(joinedload(common.Parameter.valuesets)):
         entry.representation = len(entry.valuesets)
-
-
-if __name__ == '__main__':
-    initializedb(create=main, prime_cache=prime_cache)
-    sys.exit(0)

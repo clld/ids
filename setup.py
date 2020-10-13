@@ -37,7 +37,6 @@ setup(
             'tox',
         ],
         'test': [
-            'mock>=4.0.2',
             'psycopg2>=2.8.6',
             'pytest>=6.0',
             'pytest-clld>=1.0.2',
