@@ -3,7 +3,11 @@
 <%! active_menu_item = "parameters" %>
 <%block name="title">${_('Parameter')} "${ctx.name}"</%block>
 
-<h2>${_('Parameter')} ${ctx.id} "${ctx.name}" ${u.concepticon_link(request, ctx)}</h2>
+<h2>${_('Parameter')} ${ctx.id} "${ctx.name}"
+  % if ctx.concepticon_id:
+    ${u.concepticon_link(request, ctx)}
+  % endif
+  </h2>
 
 <p>
     Chapter ${ctx.chapter.id}: ${h.link(request, ctx.chapter)}

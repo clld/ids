@@ -219,7 +219,9 @@ class ConcepticonLinkCol(Col):
     __kw__ = {'bSearchable': False, 'bSortable': False}
 
     def format(self, item):
-        return concepticon_link(self.dt.req, item)
+        if item.concepticon_id:
+            return concepticon_link(self.dt.req, item)
+        return ''
 
 
 class Entries(Parameters):
