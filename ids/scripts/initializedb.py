@@ -163,6 +163,8 @@ def main(args):
             concepticon_id=p['Concepticon_ID'],
             chapter_pk=int(chap_id),
             sub_code=sub_id,
+            concepticon_gloss=concept_list[p['Concepticon_ID']].concepticon_gloss,
+            concepticon_concept_id=concept_list[p['Concepticon_ID']].id,
             **{tr: concept_list[p['Concepticon_ID']].attributes[tr]
                 for tr in 'french russian spanish portuguese'.split()},
         )

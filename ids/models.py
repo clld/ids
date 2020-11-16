@@ -13,6 +13,7 @@ from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Contribution, Language, Value, Unit, ValueSet,
 )
+from clld.web.util import concepticon
 from clld_glottologfamily_plugin.models import HasFamilyMixin
 
 from ids.interfaces import IChapter
@@ -38,6 +39,8 @@ class Entry(CustomModelMixin, Parameter):
     chapter = relationship(Chapter, backref='entries')
     sub_code = Column(String)
     concepticon_id = Column(Integer)
+    concepticon_gloss = Column(Unicode)
+    concepticon_concept_id = Column(Unicode)
     representation = Column(Integer)
 
     french = Column(Unicode)
@@ -45,10 +48,12 @@ class Entry(CustomModelMixin, Parameter):
     spanish = Column(Unicode)
     portuguese = Column(Unicode)
 
-    @property
-    def concepticon_url(self):
-        if self.concepticon_id:
-            return 'http://concepticon.clld.org/parameters/%s' % self.concepticon_id
+    def concepticon_link(self, req):
+        return concepticon.link(
+            req,
+            id=self.concepticon_concept_id,
+            label=self.concepticon_gloss or self.concepticon_concept_id,
+            obj_type='Concept')
 
 
 @implementer(interfaces.ILanguage)
