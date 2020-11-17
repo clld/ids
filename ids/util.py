@@ -21,16 +21,6 @@ def source_detail_html(context=None, request=None, **kw):
         referents=get_referents(context, exclude=['sentence', 'valueset', 'language']))
 
 
-def concepticon_link(request, meaning):
-    return HTML.a(
-        HTML.img(
-            src=request.static_url('ids:static/concepticon_logo.png'),
-            height=20,
-            width=30),
-        title='corresponding concept set at Concepticon',
-        href=meaning.concepticon_url)
-
-
 def parse_comment_for_meaning_links(request, comment, lg_id):
     comment = HTML.escape(comment)
     for c in re.findall(r'(\d+\.\d+)', comment):

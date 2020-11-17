@@ -17,7 +17,6 @@ from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyCol
 from clld_glottologfamily_plugin.models import Family
 
 from ids.models import Chapter, Entry, ROLES, Dictionary, IdsLanguage
-from ids.util import concepticon_link
 
 
 class IDSCodeCol(Col):
@@ -216,10 +215,8 @@ class Dictionaries(Contributions):
 
 
 class ConcepticonLinkCol(Col):
-    __kw__ = {'bSearchable': False, 'bSortable': False}
-
     def format(self, item):
-        return concepticon_link(self.dt.req, item)
+        return item.concepticon_link(self.dt.req)
 
 
 class Entries(Parameters):
@@ -242,7 +239,7 @@ class Entries(Parameters):
                 "of that meaning."),
             ChapterCol(self, 'sf', sTitle='Chapter'),
             Col(self, 'representation', model_col=Entry.representation),
-            ConcepticonLinkCol(self, 'concepticon'),
+            ConcepticonLinkCol(self, 'concepticon', model_col=Entry.concepticon_gloss),
         ]))
 
 
