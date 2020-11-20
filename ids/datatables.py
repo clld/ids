@@ -3,8 +3,9 @@ from sqlalchemy.sql.expression import cast, func
 from sqlalchemy.orm import aliased, joinedload, contains_eager
 
 from clld.web.datatables import Values, Sources
-from clld.web.datatables.base import Col, LinkCol, LinkToMapCol, DataTable, IntegerIdCol
+from clld.web.datatables.base import Col, LinkCol, LinkToMapCol, DataTable, IntegerIdCol, DetailsRowLinkCol, ExternalLinkCol
 from clld.web.datatables.contribution import Contributions, CitationCol
+from clld.web.datatables.source import TypeCol
 from clld.web.datatables import contributor
 from clld.web.datatables.parameter import Parameters
 from clld.web.util.helpers import link
@@ -16,7 +17,7 @@ from clld.db.models.common import ValueSet, Value
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyCol
 from clld_glottologfamily_plugin.models import Family
 
-from ids.models import Chapter, Entry, ROLES, Dictionary, IdsLanguage
+from ids.models import Chapter, Entry, ROLES, Dictionary, IdsLanguage, Provider
 
 
 class IDSCodeCol(Col):
@@ -244,10 +245,24 @@ class Entries(Parameters):
 
 
 class IDSSources(Sources):
+    def base_query(self, query):
+        return query.join(Provider)
+
     def get_options(self):
         opts = super(Sources, self).get_options()
         opts["aaSorting"] = [[1, "asc"]]
         return opts
+
+    def col_defs(self):
+        return [
+            DetailsRowLinkCol(self, 'd'),
+            LinkCol(self, 'name'),
+            LinkCol(self, 'id', get_obj=lambda i: i.provider, sTitle='Dataset', model_col=Provider.name),
+            Col(self, 'description', sTitle='Title', format=lambda i: HTML.span(i.description)),
+            Col(self, 'year'),
+            Col(self, 'author'),
+            TypeCol(self, 'bibtex_type'),
+        ]
 
 
 class Chapters(DataTable):
@@ -259,8 +274,23 @@ class Chapters(DataTable):
         ]
 
 
+class Providers(DataTable):
+    def get_options(self):
+        opts = super(DataTable, self).get_options()
+        opts["aaSorting"] = []
+        return opts
+
+    def col_defs(self):
+        return [
+            LinkCol(self, 'name'),
+            ExternalLinkCol(self, 'url', sTitle='URL'),
+            DetailsRowLinkCol(self, 'd'),
+        ]
+
+
 def includeme(config):
     config.register_datatable('chapters', Chapters)
+    config.register_datatable('providers', Providers)
     config.register_datatable('values', Counterparts)
     config.register_datatable('contributors', Compilers)
     config.register_datatable('contributions', Dictionaries)

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2020-10-09 17:04+0200\n"
+"POT-Creation-Date: 2020-11-20 10:31+0100\n"
 "PO-Revision-Date: 2013-12-17 15:46+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -35,10 +35,18 @@ msgid "Parameters"
 msgstr "Entries"
 
 #: ids/__init__.py:19
+msgid "Provider"
+msgstr "Dataset"
+
+#: ids/__init__.py:20
+msgid "Providers"
+msgstr "Datasets"
+
+#: ids/__init__.py:21
 msgid "Value"
 msgstr "Counterparts"
 
-#: ids/__init__.py:20
+#: ids/__init__.py:22
 msgid "Values"
 msgstr "Counterparts"
 

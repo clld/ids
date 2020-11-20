@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ids 0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2020-10-09 17:04+0200\n"
+"POT-Creation-Date: 2020-11-20 10:31+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,10 +34,18 @@ msgid "Parameters"
 msgstr ""
 
 #: ids/__init__.py:19
-msgid "Value"
+msgid "Provider"
 msgstr ""
 
 #: ids/__init__.py:20
+msgid "Providers"
+msgstr ""
+
+#: ids/__init__.py:21
+msgid "Value"
+msgstr ""
+
+#: ids/__init__.py:22
 msgid "Values"
 msgstr ""
 
