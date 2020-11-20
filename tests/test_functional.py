@@ -32,6 +32,8 @@ import pytest
         ('get_html', '/contributions'),
         ('get_html', '/contributors?sSearch_1=Consultant'),
         ('get_html', '/chapters'),
+        ('get_html', '/providers'),
+        ('get_html', '/providers/ids'),
     ])
 def test_pages(app, method, path):
     getattr(app, method)(path)

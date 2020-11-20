@@ -11,12 +11,12 @@ from sqlalchemy.orm import relationship, backref
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
-    Parameter, IdNameDescriptionMixin, Contribution, Language, Value, Unit, ValueSet,
+    Parameter, IdNameDescriptionMixin, Contribution, Language, Value, Unit, ValueSet, Source
 )
 from clld.web.util import concepticon
 from clld_glottologfamily_plugin.models import HasFamilyMixin
 
-from ids.interfaces import IChapter
+from ids.interfaces import IChapter, IProvider
 
 
 ROLES = {
@@ -56,6 +56,17 @@ class Entry(CustomModelMixin, Parameter):
             obj_type='Concept')
 
 
+@implementer(IProvider)
+class Provider(Base, IdNameDescriptionMixin):
+    pk = Column(Integer, primary_key=True)
+    url = Column(Unicode)
+    license = Column(Unicode)
+    aboutUrl = Column(Unicode)
+    accessURL = Column(Unicode)
+    version = Column(Unicode)
+    doi = Column(Unicode)
+
+
 @implementer(interfaces.ILanguage)
 class IdsLanguage(CustomModelMixin, Language, HasFamilyMixin):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
@@ -66,6 +77,8 @@ class Dictionary(CustomModelMixin, Contribution):
     pk = Column(Integer, ForeignKey('contribution.pk'), primary_key=True)
     language_pk = Column(Integer, ForeignKey('language.pk'), nullable=False)
     language = relationship(Language, backref=backref('dictionary', uselist=False))
+    provider_pk = Column(Integer, ForeignKey('provider.pk'), nullable=False)
+    provider = relationship(Provider, backref=backref('dictionaries', uselist=True))
 
     default_representation = Column(Unicode)
     alt_representation = Column(Unicode)
@@ -99,3 +112,10 @@ class Synset(CustomModelMixin, ValueSet):
     pk = Column(Integer, ForeignKey('valueset.pk'), primary_key=True)
 
     alt_representation = Column(Unicode)
+
+
+@implementer(interfaces.ISource)
+class IdsSource(CustomModelMixin, Source):
+    pk = Column(Integer, ForeignKey('source.pk'), primary_key=True)
+    provider_pk = Column(Integer, ForeignKey('provider.pk'), nullable=False)
+    provider = relationship(Provider, backref=backref('source', uselist=False))

@@ -8,7 +8,7 @@ from clld_glottologfamily_plugin.util import LanguageByFamilyMapMarker
 
 # we must make sure custom models are known at database initialization!
 from ids import models
-from ids.interfaces import IChapter
+from ids.interfaces import IChapter, IProvider
 
 
 _ = lambda a: a
@@ -16,6 +16,8 @@ _('Contribution')
 _('Contributions')
 _('Parameter')
 _('Parameters')
+_('Provider')
+_('Providers')
 _('Value')
 _('Values')
 
@@ -62,4 +64,5 @@ def main(global_config, **settings):
         extension='tab',
         name='tab-separated values'), IContribution)
     config.register_resource('chapter', models.Chapter, IChapter, with_index=True)
+    config.register_resource('provider', models.Provider, IProvider, with_index=True)
     return config.make_wsgi_app()

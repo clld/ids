@@ -1,9 +1,21 @@
-<%inherit file="home_comp.mako"/>
-<%namespace name="mpg" file="clldmpg_util.mako"/>
+<%inherit file="${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
+<%namespace name="clldmpgutil" file="clldmpg_util.mako"/>
+<%namespace name="util" file="util.mako"/>
 
 <h3>Downloads</h3>
-
-<div class="alert alert-info">
-    Bulk downloads of the IDS data are available as CLDF Wordlist sets on Zenodo at
-    <a href="https://doi.org/10.5281/zenodo.1299512"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.1299512.svg" alt="DOI"></a>.
-</div>
+<p>
+  Please find here the list of the underlying datasets and their access URLs:
+</p>
+<table>
+  <thead style="border-bottom:1px solid lightgray"><td>Name (URL)</td><td>Version</td></thead>
+  % for p in u.get_provider():
+  <tr>
+    <td>${h.external_link(url=p.accessURL, label=p.name, target="_new")}</td>
+    % if p.version.find(' ') > -1:
+      <td><i>accessed: ${p.version}</i></td>
+    % elif p.doi:
+      <td><a href="${p.accessURL}"><img src="https://zenodo.org/badge/DOI/${p.doi}.svg"/></a></td>
+    % endif
+  </tr>
+  % endfor
+</table>

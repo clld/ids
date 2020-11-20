@@ -5,7 +5,13 @@ from clld.db.models.common import Source, Parameter
 from clld.web.util.helpers import get_referents, link
 from clld.web.util.htmllib import HTML
 
-from ids.models import Chapter
+from ids.models import Chapter, Provider
+
+
+def get_provider():
+    return [
+        r for r in DBSession.query(Provider).order_by(Provider.pk)
+    ]
 
 
 def dataset_detail_html(context=None, request=None, **kw):

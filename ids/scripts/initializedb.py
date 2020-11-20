@@ -1,4 +1,5 @@
 import unicodedata
+import re
 from itertools import groupby
 from collections import defaultdict, OrderedDict
 from datetime import date
@@ -17,12 +18,14 @@ from clldutils.misc import slug, nfilter
 from clldutils.path import Path
 from clld_glottologfamily_plugin.util import load_families
 from pyconcepticon.api import Concepticon
-from pycldf.dataset import Wordlist, iter_datasets
+import pycldf
 
 import ids
 from ids import models
+from ids.scripts.utils.helper import git_last_commit_date, prepare_additional_datasets, get_rdfID
 
 
+IDS_RDFID = 'ids'
 CONCEPT_LIST = 'Key-2016-1310'
 
 EDITORS = OrderedDict([
@@ -33,15 +36,37 @@ with_collkey_ddl()
 
 
 def main(args):
-    data_set_path = input('Path to IDS cldf datasets:') or \
-                    Path(ids.__file__).parent.parent.parent.parent / 'intercontinental-dictionary-series'
-    ids_datasets = sorted(
-        [ds for ds in iter_datasets(data_set_path)
-         if ds.properties.get('dc:format', ['x'])[0].endswith(CONCEPT_LIST)],
-        key=lambda d: (d.properties.get('rdf:ID') != 'ids', d.properties.get('rdf:ID')))
-    assert ids_datasets and ids_datasets[0].properties['rdf:ID'] == 'ids', 'invalid ds directory'
+
+    # path of datasets
+    internal_repo = Path(ids.__file__).parent.parent.parent.parent / 'intercontinental-dictionary-series' / 'ids-internal'
+
     assert args.glottolog, 'The --glottolog option is required!'
     assert args.concepticon, 'The --concepticon option is required!'
+
+    cache_dir = internal_repo / 'datasets'
+    cache_dir.mkdir(exist_ok=True)
+
+    submissions_path = internal_repo / 'submissions-internal'
+
+    ds_metadata = prepare_additional_datasets(args, submissions_path, cache_dir)
+
+    is_ids_ds_found = False
+    ids_datasets = [None] * max(ds_metadata['contrib_order'].values())
+
+    # add all datasets by passed 'order' and ignore datasets marked as 'skip'
+    for ds in pycldf.iter_datasets(cache_dir):
+        if str(ds.directory).endswith('/cldf'):
+            ds_dir = ds_metadata['contrib_paths_map'].get(ds.directory.parent.name, ds.directory.parent.name)
+            if ds_dir in ds_metadata['contrib_skips']:
+                if ds_metadata['contrib_skips'][ds_dir]:
+                    args.log.info('{0} will be skipped'.format(ds_dir))
+                    continue
+            if ds_dir == IDS_RDFID:
+                is_ids_ds_found = True
+            ids_datasets[ds_metadata['contrib_order'][ds_dir] - 1] = ds
+    ids_datasets = [x for x in ids_datasets if x is not None]
+
+    assert is_ids_ds_found, 'dataset "ids" must be imported'
 
     Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     data = Data()
@@ -67,33 +92,94 @@ def main(args):
         domain='ids.clld.org')
 
     DBSession.add(dataset)
-    for ds in ids_datasets:
-        for rec in Database.from_file(ds.bibpath, lowercase=True):
-            if rec.id not in data['Source']:
-                data.add(common.Source, rec.id, _obj=bibtex2source(rec))
     DBSession.flush()
 
     contributors = defaultdict(list)
     languages = []
     altnames = {}
+    max_lang_id = -1
+    lang_id_map = defaultdict(dict)
 
-    for ads in ids_datasets:
-        for lg in ads["LanguageTable"]:
+    for ds in ids_datasets:
+        rdfID = get_rdfID(ds, ds_metadata, args)
+        if rdfID is None:
+            continue
+
+        doi = ''
+        git_version = ''
+        accessURL = ds.properties.get('dcat:accessURL')
+        if rdfID in ds_metadata['contrib_dois']:
+            doi = ds_metadata['contrib_dois'][rdfID]
+            accessURL = 'https://doi.org/{0}'.format(doi)
+        else:
+            git_version = git_last_commit_date(ds.directory.parent)
+
+        descr = ds.properties.get('dc:bibliographicCitation')
+        if rdfID != IDS_RDFID:
+            # remove possible 'Available online at ...' string
+            # which will be added by IDS app on-the-fly
+            descr = re.sub(r'\s*\(Available[^(]+?\)\s*$', '', descr),
+
+        prov = data.add(
+            models.Provider,
+            rdfID,
+            id=rdfID,
+            name=ds.properties.get('dc:title'),
+            description=descr,
+            url=ds.properties.get('dc:identifier'),
+            license=ds.properties.get('dc:license'),
+            aboutUrl=ds.properties.get('aboutUrl'),
+            accessURL=accessURL,
+            version=git_version,
+            doi=doi,
+        )
+        DBSession.flush()
+
+        for rid, rec in enumerate(Database.from_file(ds.bibpath, lowercase=True)):
+            rec_id = rec.id
+            # set data url to accessURL and add Provider
+            if rec_id not in data['IdsSource']:
+                ns = bibtex2source(rec, models.IdsSource)
+                if rdfID != IDS_RDFID and not ns.url:
+                    ns.url = accessURL
+                ns.id = rec_id
+                ns.provider_pk = prov.pk
+                src = data.add(
+                    models.IdsSource,
+                    rec_id,
+                    _obj=ns,
+                )
+        DBSession.flush()
+
+        for lg in ds["LanguageTable"]:
+            # add additional language IDs after importing
+            # IDS core as numbers
+            if rdfID != IDS_RDFID:
+                max_lang_id += 1
+                lg_id = str(max_lang_id)
+            else:
+                lg_id = lg["ID"]
+                if int(lg_id) > max_lang_id:
+                    max_lang_id = int(lg_id)
+
             lang = data.add(
                 models.IdsLanguage,
-                lg['ID'],
-                id=lg['ID'],
+                lg_id,
+                id=lg_id,
                 name=lg['Name'],
                 latitude=lg['Latitude'],
                 longitude=lg['Longitude'],
             )
+
+            lang_id_map[rdfID][lg["ID"]] = lg_id
+
             code = lg['Glottocode']
             if code:
                 languages.append((code, lang))
             data.add(
                 models.Dictionary,
-                lg['ID'],
-                id=lg['ID'],
+                lg_id,
+                id=lg_id,
                 name=unicodedata.normalize('NFD', lg['Name']),
                 language=lang,
                 default_representation=lg['Representations'][0]
@@ -101,10 +187,11 @@ def main(args):
                 alt_representation=lg['Representations'][1]
                 if len(lg['Representations']) > 1 else None,
                 jsondata=dict(status=0, date=lg['date']),
+                provider_pk=prov.pk,
             )
             for idx, header in models.ROLES.items():
                 for name in lg[header[1]]:
-                    contributors[slug(name)].append((name, idx, lg['ID']))
+                    contributors[slug(name)].append((name, idx, lg_id))
 
             for i, an in enumerate(lg['alt_names']):
                 if an in altnames:
@@ -114,10 +201,11 @@ def main(args):
                         common.Identifier, an,
                         id='name-%s' % i, type='name', name=an, description='IDS')
                     altnames[an] = identifier
-                if an != data['IdsLanguage'][lg['ID']].name:
+                if an != data['IdsLanguage'][lg_id].name:
                     DBSession.add(common.LanguageIdentifier(
                         identifier=identifier,
-                        language=data['IdsLanguage'][lg['ID']]))
+                        language=data['IdsLanguage'][lg_id]))
+        DBSession.flush()
 
     load_families(
         Data(),
@@ -170,7 +258,7 @@ def main(args):
         )
 
     DBSession.flush()
-    for entity in 'IdsLanguage Entry Chapter Dictionary Source'.split():
+    for entity in 'IdsLanguage Entry Chapter Dictionary IdsSource'.split():
         for k in list(data[entity].keys()):
             data[entity][k] = data[entity][k].pk
 
@@ -181,7 +269,11 @@ def main(args):
     problems = defaultdict(list)
 
     for ds in ids_datasets:
-        for lg_id, entries in tqdm(
+        rdfID = get_rdfID(ds, ds_metadata, args)
+        if rdfID is None:
+            continue
+
+        for lg_id_, entries in tqdm(
             groupby(
                 sorted(ds["FormTable"], key=lambda t: t['Language_ID']),
                 lambda k: k['Language_ID']),
@@ -190,6 +282,8 @@ def main(args):
             # keep the memory footprint reasonable
             transaction.commit()
             transaction.begin()
+
+            lg_id = lang_id_map[rdfID][lg_id_]
 
             language = common.Language.get(data['IdsLanguage'][lg_id])
             words = defaultdict(list)
@@ -204,10 +298,10 @@ def main(args):
                     if e['Source']:
                         for s in e['Source']:
                             DBSession.add(common.ContributionReference(
-                                contribution_pk=language.pk, source_pk=data['Source'][s]))
+                                contribution_pk=language.pk, source_pk=data['IdsSource'][s]))
 
                 entry_id = e['Parameter_ID']
-                id_ = '{0}-{1}'.format(entry_id, e['Language_ID'])
+                id_ = '{0}-{1}'.format(entry_id, lg_id)
                 try:
                     _ = synsets[id_]
                     vs = models.Synset.get(id_)
@@ -216,7 +310,7 @@ def main(args):
                         id=id_,
                         alt_representation=alt_repr,
                         language=language,
-                        contribution_pk=data['Dictionary'][e['Language_ID']],
+                        contribution_pk=data['Dictionary'][lg_id],
                         parameter_pk=data['Entry'][entry_id])
                     synsets[id_] = None
 
@@ -262,12 +356,12 @@ def main(args):
                     word.counterparts.append(v)
                 DBSession.add(word)
 
-            DBSession.flush()
+        DBSession.flush()
 
-    #if len(problems):
-    #    print("=== Problems ===")
-    #    for k, v in problems.items():
-    #        print(k, v)
+    # if len(problems):
+    #     print("=== Problems ===")
+    #     for k, v in problems.items():
+    #         print(k, v)
 
 
 def prime_cache(args):
