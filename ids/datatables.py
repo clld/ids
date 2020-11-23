@@ -78,7 +78,7 @@ class Counterparts(Values):
             return DBSession.query(Value).join(ValueSet)\
                 .join(ValueSet.language)\
                 .join(ValueSet.parameter)\
-                .join(Family, isouter=True)\
+                .join(IdsLanguage.family, isouter=True)\
                 .options(joinedload(Value.valueset).joinedload(ValueSet.language),
                          joinedload(Value.valueset, ValueSet.parameter))
         if self.contribution:
