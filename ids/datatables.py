@@ -83,7 +83,7 @@ class Counterparts(Values):
                          joinedload(Value.valueset, ValueSet.parameter))
         if self.contribution:
             return query
-        return query.join(Family, isouter=True)
+        return query
 
     def col_defs(self):
         lang = lambda i: i.valueset.language
