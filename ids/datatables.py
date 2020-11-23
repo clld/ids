@@ -79,7 +79,7 @@ class Counterparts(Values):
                 .join(ValueSet.language)\
                 .join(ValueSet.parameter)\
                 .join(Family, isouter=True)\
-                .options(joinedload(Value.valueset, ValueSet.language),
+                .options(joinedload(Value.valueset).joinedload(ValueSet.language),
                          joinedload(Value.valueset, ValueSet.parameter))
         if self.contribution:
             return query
