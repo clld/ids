@@ -8,7 +8,7 @@ from clld.web.datatables.contribution import Contributions, CitationCol
 from clld.web.datatables.source import TypeCol
 from clld.web.datatables import contributor
 from clld.web.datatables.parameter import Parameters
-from clld.web.util.glottolog import url
+from clld.web.util.glottolog import link as gc_link
 from clld.web.util.helpers import link, external_link
 from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
@@ -191,11 +191,10 @@ class IdsGlottocodeCol(Col):
 
     def format(self, item):
         if item.language.glottocode:
-            return external_link(
-                url=url(item.language.glottocode),
-                label=item.language.glottocode,
-                title="View languoid {0} at Glottolog".format(item.language.glottocode),
-                target="_new")
+            return gc_link(
+                self.dt.req,
+                item.language.glottocode,
+                label=item.language.glottocode)
         else:
             return ""
 
