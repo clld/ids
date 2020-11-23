@@ -5,7 +5,7 @@
 
 <h2>Word <span class="charissil">${ctx}</span></h2>
 
-% if ctx.alt_name:
+% if ctx.alt_name and ctx.alt_description:
 ${util.dl_table(**{ctx.alt_description: ctx.alt_name})}
 % endif
 

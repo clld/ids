@@ -38,6 +38,9 @@ import pytest
         ('get_html', '/chapters'),
         ('get_html', '/providers'),
         ('get_html', '/providers/ids'),
+        ('get_html', '/languages'),
+        ('get_html', '/languages/26'),
+        ('get_html', '/units/238-365'),
     ])
 def test_pages(app, method, path):
     getattr(app, method)(path)
