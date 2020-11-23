@@ -1,4 +1,4 @@
-from sqlalchemy import Integer
+from sqlalchemy import Integer, and_
 from sqlalchemy.sql.expression import cast, func
 from sqlalchemy.orm import aliased, joinedload, contains_eager
 
@@ -8,12 +8,14 @@ from clld.web.datatables.contribution import Contributions, CitationCol
 from clld.web.datatables.source import TypeCol
 from clld.web.datatables import contributor
 from clld.web.datatables.parameter import Parameters
-from clld.web.util.helpers import link
+from clld.web.util.glottolog import link as gc_link
+from clld.web.util.helpers import link, external_link
 from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
-from clld.db.util import collkey
-import clld.db.models.common
-from clld.db.models.common import ValueSet, Value
+from clld.db.util import collkey, icontains
+from clld.db.models.common import (
+    ValueSet, Value, Identifier, LanguageIdentifier, IdentifierType, Language,
+    Parameter, Contribution, ContributionContributor, Contributor)
 from clld_glottologfamily_plugin.datatables import MacroareaCol, FamilyCol
 from clld_glottologfamily_plugin.models import Family
 
@@ -77,7 +79,7 @@ class Counterparts(Values):
                 .join(ValueSet.language)\
                 .join(ValueSet.parameter)\
                 .join(Family, isouter=True)\
-                .options(joinedload(Value.valueset).joinedload(ValueSet.language),
+                .options(joinedload(Value.valueset, ValueSet.language),
                          joinedload(Value.valueset, ValueSet.parameter))
         if self.contribution:
             return query
@@ -91,7 +93,7 @@ class Counterparts(Values):
                 LinkToMapCol(self, 'm', get_object=lang),
                 LinkCol(
                     self, 'language',
-                    model_col=clld.db.models.common.Language.name,
+                    model_col=Language.name,
                     get_object=lang),
                 IdsFamilyCol(
                     self, 'family',
@@ -102,27 +104,27 @@ class Counterparts(Values):
             res = [
                 IDSCodeCol(
                     self, 'ids_code',
-                    model_col=clld.db.models.common.Parameter.id,
+                    model_col=Parameter.id,
                     get_object=param),
                 LinkCol(
                     self, 'meaning',
-                    model_col=clld.db.models.common.Parameter.name,
+                    model_col=Parameter.name,
                     get_object=param),
                 ChapterCol(self, 'chapter', get_object=param)]
         else:
             res = [
                 IDSCodeCol(
                     self, 'ids_code',
-                    model_col=clld.db.models.common.Parameter.id,
+                    model_col=Parameter.id,
                     get_object=param),
                 LinkCol(
                     self, 'meaning',
-                    model_col=clld.db.models.common.Parameter.name,
+                    model_col=Parameter.name,
                     get_object=param),
                 ChapterCol(self, 'chapter', get_object=param),
                 LinkCol(
                     self, 'language',
-                    model_col=clld.db.models.common.Language.name,
+                    model_col=Language.name,
                     get_object=lang),
                 IdsFamilyCol(
                     self, 'family',
@@ -132,7 +134,7 @@ class Counterparts(Values):
         res.extend([
             FormCol(
                 self, 'counterparts',
-                model_col=clld.db.models.common.Value.name,
+                model_col=Value.name,
                 sClass="charissil"),
             Col(self, 'description'),
         ])
@@ -152,13 +154,13 @@ class RoleCol(Col):
 
 class Compilers(contributor.Contributors):
     def base_query(self, query):
-        return DBSession.query(clld.db.models.common.ContributionContributor).join(clld.db.models.common.Contribution).join(clld.db.models.common.Contributor)
+        return DBSession.query(ContributionContributor).join(Contribution).join(Contributor).join(Language)
 
     def col_defs(self):
         return [
-            LinkCol(self, 'name', get_object=lambda i: i.contributor, model_col=clld.db.models.common.Contributor.name),
-            RoleCol(self, 'role', model_col=clld.db.models.common.ContributionContributor.ord),
-            LinkCol(self, 'dictionary', get_object=lambda i: i.contribution, model_col=clld.db.models.common.Contribution.name),
+            LinkCol(self, 'name', get_object=lambda i: i.contributor, model_col=Contributor.name),
+            RoleCol(self, 'role', model_col=ContributionContributor.ord),
+            LinkCol(self, 'dictionary', get_object=lambda i: i.contribution, model_col=Contribution.name),
         ]
 
 
@@ -184,16 +186,46 @@ class IdsFamilyCol(FamilyCol):
         return FamilyCol.format(self, item)
 
 
+class IdsGlottocodeCol(Col):
+    __kw__ = {"bSortable": False}
+
+    def format(self, item):
+        if item.language.glottocode:
+            return gc_link(
+                self.dt.req,
+                item.language.glottocode,
+                label=item.language.glottocode)
+        else:
+            return ""
+
+    def search(self, qs):
+        return and_(Identifier.type.__eq__(IdentifierType.glottolog.value),
+                    icontains(Identifier.name, qs))
+
+
+class IdsISOCol(Col):
+    __kw__ = {"bSortable": False}
+
+    def format(self, item):
+        return item.language.iso_code
+
+    def search(self, qs):
+        return and_(Identifier.type.__eq__(IdentifierType.iso.value),
+                    icontains(Identifier.name, qs))
+
+
 class Dictionaries(Contributions):
     def __init__(self, *args, **kw):
         Contributions.__init__(self, *args, **kw)
         self.roles = {}
         for roleid in ROLES.keys():
-            self.roles[roleid] = aliased(clld.db.models.common.ContributionContributor, name='role%s' % roleid)
+            self.roles[roleid] = aliased(ContributionContributor, name='role%s' % roleid)
 
     def base_query(self, query):
-        q = DBSession.query(clld.db.models.common.Contribution)\
+        q = DBSession.query(Contribution)\
             .join(Dictionary.language)\
+            .outerjoin(LanguageIdentifier)\
+            .outerjoin(Identifier)\
             .outerjoin(IdsLanguage.family)\
             .options(
                 contains_eager(Dictionary.language),
@@ -206,6 +238,8 @@ class Dictionaries(Contributions):
         res = [
             LinkCol(self, 'name'),
             LinkToMapCol(self, 'm', get_object=lambda i: i.language),
+            IdsGlottocodeCol(self, 'Glottocode', get_object=lambda i: i.language),
+            IdsISOCol(self, 'ISO', get_object=lambda i: i.language, sTitle='ISO 639-3'),
             MacroareaCol(self, 'macroarea', get_object=lambda i: i.language, language_cls=IdsLanguage),
             IdsFamilyCol(self, 'family', get_object=lambda i: i.language, language_cls=IdsLanguage),
         ]

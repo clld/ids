@@ -193,18 +193,6 @@ def main(args):
                 for name in lg[header[1]]:
                     contributors[slug(name)].append((name, idx, lg_id))
 
-            for i, an in enumerate(lg['alt_names']):
-                if an in altnames:
-                    identifier = altnames[an]
-                else:
-                    identifier = data.add(
-                        common.Identifier, an,
-                        id='name-%s' % i, type='name', name=an, description='IDS')
-                    altnames[an] = identifier
-                if an != data['IdsLanguage'][lg_id].name:
-                    DBSession.add(common.LanguageIdentifier(
-                        identifier=identifier,
-                        language=data['IdsLanguage'][lg_id]))
         DBSession.flush()
 
     load_families(
