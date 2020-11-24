@@ -9,6 +9,8 @@ import pytest
         ('get_html', '/contributions/500'),
         ('get_html', '/contributions.geojson'),
         ('get_dt', '/contributions'),
+        ('get_html', '/contributions/28.tab'),
+        ('get_html', '/contributions/208.tab'),
         ('get_dt', '/languages'),
         ('get_html', '/contributions/215'),
         ('get_dt', '/values?iSortCol_0=5&sSortDir_0=asc&iSortingCols=1'),
