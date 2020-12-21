@@ -83,6 +83,8 @@ class Counterparts(Values):
                          joinedload(Value.valueset, ValueSet.parameter))
         if self.contribution:
             return query
+        if self.parameter:
+            return query.join(IdsLanguage.family, isouter=True)
         return query
 
     def col_defs(self):
