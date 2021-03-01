@@ -3,7 +3,7 @@
 <%! active_menu_item = "contributions" %>
 <%block name="title">${ctx.language} - "${ctx.parameter}"</%block>
 
-<h2>Words in ${h.link(request, ctx.language)} for meaning ${ctx.parameter.id} "${h.link(request, ctx.parameter)}"</h2>
+<h3>Words in ${h.link(request, ctx.language)} for meaning ${ctx.parameter.id} "${h.link(request, ctx.parameter)}"</h3>
 
 <table class="table table-nonfluid">
   % if ctx.language.dictionary.default_representation:
@@ -11,7 +11,9 @@
     <tr>
       <td>${ctx.language.dictionary.default_representation}</td>
       % if ctx.language.dictionary.alt_representation:
-      <td>${ctx.language.dictionary.alt_representation}</td>
+        % for r in ctx.language.dictionary.alt_representation.split(';'):
+          <td>${r or ''}</td>
+        % endfor
       % endif
     </tr>
   </thead>
@@ -20,8 +22,14 @@
     % for i, value in enumerate(ctx.values):
     <tr>
       <td>${h.link(request, value.word, class_='charissil')}</td>
-      % if ctx.language.dictionary.alt_representation:
-      <td class="charissil">${value.word.alt_name or ''}</td>
+      % if value.word.alt_name:
+        % for i, r in enumerate(value.word.alt_name.split(', ')):
+          % if value.word.counterparts[i].valueset.parameter.id == ctx.parameter.id:
+            % for r_ in r.split(';'):
+              <td class="charissil">${r_ or ''}</td>
+            % endfor
+          % endif
+        % endfor
       % endif
     </tr>
     % endfor
