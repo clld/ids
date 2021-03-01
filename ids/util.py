@@ -45,7 +45,7 @@ def has_any_comments(values):
 
 
 def has_same_comments(values):
-    return len(set([v.comment for v in values])) > 0
+    return len(set([v.comment for v in values])) == 1
 
 
 def any_org_value_differ(values):
@@ -55,4 +55,4 @@ def any_org_value_differ(values):
 
 
 def has_same_org_values(values):
-    return len(set([v.org_value for v in values])) > 0
+    return len(set([v.org_value for v in values])) == 1
