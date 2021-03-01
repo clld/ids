@@ -184,7 +184,7 @@ def main(args):
                 language=lang,
                 default_representation=lg['Representations'][0]
                 if len(lg['Representations']) > 0 else None,
-                alt_representation=lg['Representations'][1]
+                alt_representation=';'.join(lg['Representations'][1:])
                 if len(lg['Representations']) > 1 else None,
                 jsondata=dict(status=0, date=lg['date']),
                 provider_pk=prov.pk,
@@ -279,7 +279,7 @@ def main(args):
             for i, e in enumerate(entries):
                 # all entries have the same sources/descriptions per lang
                 if not i:
-                    alt_repr = e['Transcriptions'][1]\
+                    alt_repr = e['Transcriptions'][1:]\
                         if len(e['Transcriptions']) > 1 else None
                     desc = e['Transcriptions'][0]\
                         if len(e['Transcriptions']) > 0 else None
@@ -296,7 +296,7 @@ def main(args):
                 except KeyError:
                     vs = models.Synset(
                         id=id_,
-                        alt_representation=alt_repr,
+                        alt_representation=';'.join(alt_repr) if alt_repr else None,
                         language=language,
                         contribution_pk=data['Dictionary'][lg_id],
                         parameter_pk=data['Entry'][entry_id])
@@ -315,8 +315,9 @@ def main(args):
                         comment=e['Comment'],
                         org_value=e['Value'],
                         valueset=vs)
-                    if e['AlternativeValues'] and e['AlternativeValues'][0]:
-                        words[word].append((v, e['AlternativeValues'][0]))
+                    if e['AlternativeValues'] and len(e['AlternativeValues']) > 0:
+                        avs = ['' if v is None else v.strip() for v in e['AlternativeValues']]
+                        words[word].append((v, ';'.join(avs)))
                     else:
                         words[word].append((v, None))
                     counterparts[cid] = None
@@ -338,7 +339,7 @@ def main(args):
                     description=desc,
                     language=language,
                     alt_name=', '.join(alt_names) if alt_names else None,
-                    alt_description=alt_repr,
+                    alt_description=';'.join(alt_repr) if alt_repr else None,
                 )
                 for v, _ in words[form]:
                     word.counterparts.append(v)
