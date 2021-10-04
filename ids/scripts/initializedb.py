@@ -78,7 +78,7 @@ def main(args):
         id=ids.__name__,
         name="IDS",
         description="The Intercontinental Dictionary Series",
-        published=date(2015, 5, 25),
+        published=date(2021, 10, 4),
         publisher_name="Max Planck Institute for Evolutionary Anthropology",
         publisher_place="Leipzig",
         publisher_url="https://www.eva.mpg.de",
