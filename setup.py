@@ -20,7 +20,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'clld>=8.0.0',
+        'clld>=9.0.0',
         'clldmpg>=4.2.0',
         'clldutils>=3.9.0',
         'clld-glottologfamily-plugin>=4.0.0',

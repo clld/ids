@@ -12,7 +12,6 @@ from tqdm import tqdm
 from clld.cliutil import Data, bibtex2source
 from clld.db.meta import DBSession
 from clld.db.models import common
-from clld.db.util import collkey, with_collkey_ddl
 from clld.lib.bibtex import Database
 from clldutils.misc import slug, nfilter
 from clldutils.path import Path
@@ -32,7 +31,6 @@ EDITORS = OrderedDict([
     ('maryritchiekey', ("Mary Ritchie Key", "University of California, Irvine")),
     ('bernardcomrie', ("Bernard Comrie", "University of California, Santa Barbara")),
 ])
-with_collkey_ddl()
 
 
 def main(args):
@@ -68,7 +66,6 @@ def main(args):
 
     assert is_ids_ds_found, 'dataset "ids" must be imported'
 
-    Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
     data = Data()
     concept_list = {
         c.concepticon_id: c

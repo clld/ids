@@ -12,7 +12,7 @@ from clld.web.util.glottolog import link as gc_link
 from clld.web.util.helpers import link, external_link
 from clld.web.util.htmllib import HTML
 from clld.db.meta import DBSession
-from clld.db.util import collkey, icontains
+from clld.db.util import icontains
 from clld.db.models.common import (
     ValueSet, Value, Identifier, LanguageIdentifier, IdentifierType, Language,
     Parameter, Contribution, ContributionContributor, Contributor)
@@ -56,7 +56,7 @@ class ChapterCol(Col):
 
 class FormCol(LinkCol):
     def order(self):
-        return collkey(func.replace(func.replace(Value.name, '`', ''), 'ː', ''))
+        return func.replace(func.replace(Value.name, '`', ''), 'ː', '')
 
 
 class Counterparts(Values):
