@@ -80,7 +80,7 @@ def main(args):
         publisher_place="Leipzig",
         publisher_url="https://www.eva.mpg.de",
         license='https://creativecommons.org/licenses/by/4.0/',
-        contact='forkel@shh.mpg.de',
+        contact='dlce.rdm@eva.mpg.de',
         jsondata={
             'license_icon': 'cc-by.png',
             'license_name':
