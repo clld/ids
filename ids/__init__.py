@@ -1,9 +1,8 @@
 from pyramid.config import Configurator
 
 from clld.web.adapters.base import adapter_factory
-from clld.web.adapters.cldf import CldfConfig
 from clld.db.models.common import Value, Parameter
-from clld.interfaces import ILinkAttrs, IMapMarker, IContribution, IValue, ILanguage, ICldfConfig
+from clld.interfaces import ILinkAttrs, IMapMarker, IContribution, IValue, ILanguage
 from clld_glottologfamily_plugin.util import LanguageByFamilyMapMarker
 
 # we must make sure custom models are known at database initialization!
@@ -20,23 +19,6 @@ _('Provider')
 _('Providers')
 _('Value')
 _('Values')
-
-
-class IDSCldfConfig(CldfConfig):
-    def custom_schema(self, req, ds):
-        ds.add_columns('FormTable', 'transcription', 'alt_form', 'alt_transcription')
-        ds.add_columns('ParameterTable', 'Concepticon_ID')
-
-    def convert(self, model, item, req):
-        res = CldfConfig.convert(self, model, item, req)
-        if model == Value:
-            res['transcription'] = item.word.description
-            res['alt_form'] = item.word.alt_name
-            res['alt_transcription'] = item.word.alt_description
-            res['Source'] = [r.source.id for r in item.valueset.contribution.references]
-        if model == Parameter:
-            res['Concepticon_ID'] = item.concepticon_id
-        return res
 
 
 def link_attrs(req, obj, **kw):
@@ -56,7 +38,6 @@ def main(global_config, **settings):
     config.include('clldmpg')
     config.registry.registerUtility(LanguageByFamilyMapMarker(), IMapMarker)
     config.registry.registerUtility(link_attrs, ILinkAttrs)
-    config.registry.registerUtility(IDSCldfConfig(), ICldfConfig)
     config.register_adapter(adapter_factory(
         'contribution/detail_tab.mako',
         mimetype='application/vnd.clld.tab',
