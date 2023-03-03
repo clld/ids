@@ -75,6 +75,7 @@ def prepare_additional_datasets(args, submissions_path, cache_dir):
 
         else:
             path = cache_dir / sid
+            contrib_paths_map[sid] = sid
 
         if not path.exists():
             args.log.error('could not find folder', str(path))
