@@ -3,7 +3,7 @@ import subprocess
 from clldutils import jsonlib
 from clldutils.path import Path
 from clldutils.misc import slug
-from ids.scripts.utils.cldf_zenodo import download_from_doi
+from cldfzenodo import API as ZenodoAPI
 
 
 def prepare_additional_datasets(args, submissions_path, cache_dir):
@@ -48,17 +48,14 @@ def prepare_additional_datasets(args, submissions_path, cache_dir):
         if contrib_md.get('doi'):
             doi = contrib_md['doi']
             contrib_dois[sid] = doi
-            path = cache_dir / '{}-{}'.format(sid, slug(doi))
+            int_id = '{}-{}'.format(sid, slug(doi))
+            path = cache_dir / int_id
             if not path.exists():
                 args.log.info(' * downloading dataset from Zenodo; doi: {0}'.format(doi))
-                download_from_doi(doi, path)
+                ZenodoAPI.get_record(doi=doi).download(path)
             else:
                 args.log.info('   using cache')
-            # get the first directory name as contrib_path for initdb
-            for child in path.iterdir():
-                if child.is_dir():
-                    contrib_paths_map[str(child.name)] = sid
-                    break
+            contrib_paths_map[int_id] = sid
 
         elif contrib_md.get('repo'):
             repo = contrib_md.get('repo')
