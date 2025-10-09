@@ -24,7 +24,7 @@ setup(
         'clldmpg>=4.3.0',
         'clldutils>=3.20.0',
         'clld-glottologfamily-plugin>=4.0.0',
-        'cldfzenodo>=2.1.1'
+        'cldfzenodo>=2.1.1',
         'csvw>=3.1.3',
         'pyglottolog>=3.12.0',
         'pyconcepticon>=3.0.0',
