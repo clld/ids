@@ -1,13 +1,21 @@
-import git
+import pathlib
+import argparse
 import subprocess
+from typing import Any
+
+import git
 from clldutils import jsonlib
 from clldutils.path import Path
 from clldutils.misc import slug
 from cldfzenodo import API as ZenodoAPI
 
 
-def prepare_additional_datasets(args, submissions_path, cache_dir):
-    # download and prepare resp. additional datasets
+def prepare_additional_datasets(
+        args: argparse.Namespace,
+        submissions_path: pathlib.Path,
+        cache_dir: pathlib.Path,
+) -> dict[str, Any]:
+    """Download and prepare resp. additional datasets"""
     rdfids = {}
     contrib_paths_map = {}
     contrib_repos = {}
@@ -20,18 +28,18 @@ def prepare_additional_datasets(args, submissions_path, cache_dir):
         if not contrib_dir.is_dir():
             continue
 
-        args.log.info('Loading submission {0}'.format(contrib_dir.name))
+        args.log.info('Loading submission %s', contrib_dir.name)
         contrib_md = jsonlib.load(contrib_dir / 'md.json')
         sid = contrib_md['id']
         if sid in unique_sids:
-            args.log.error('Id "{0}" of {1} is already used'.format(sid, contrib_dir.name))
+            args.log.error('Id "%s" of %s is already used', sid, contrib_dir.name)
             assert False, 'id error'
         else:
             unique_sids.add(sid)
 
         order = int(contrib_md['order'])
         if order in unique_order:
-            args.log.error('Order "{0}" of {1} is already used'.format(sid, contrib_dir.name))
+            args.log.error('Order "%s" of %s is already used', sid, contrib_dir.name)
             assert False, 'order error'
         else:
             unique_order.add(order)

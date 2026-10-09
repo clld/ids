@@ -1,11 +1,10 @@
-import unicodedata
 import re
-from itertools import groupby
-from collections import defaultdict, OrderedDict
-from datetime import date
+import datetime
+import itertools
+import collections
+import unicodedata
 
 import transaction
-from sqlalchemy import Index
 from sqlalchemy.orm import joinedload
 from tqdm import tqdm
 
@@ -27,7 +26,7 @@ from ids.scripts.utils.helper import git_last_commit_date, prepare_additional_da
 IDS_RDFID = 'ids'
 CONCEPT_LIST = 'Key-2016-1310'
 
-EDITORS = OrderedDict([
+EDITORS = collections.OrderedDict([
     ('maryritchiekey', ("Mary Ritchie Key", "University of California, Irvine")),
     ('bernardcomrie', ("Bernard Comrie", "University of California, Santa Barbara")),
 ])
@@ -36,7 +35,7 @@ EDITORS = OrderedDict([
 def main(args):
 
     # path of datasets
-    internal_repo = Path(ids.__file__).parent.parent.parent.parent / 'intercontinental-dictionary-series' / 'ids-internal'
+    internal_repo = Path(ids.__file__).parent.parent.parent.parent / 'ids' / 'ids-internal'
 
     assert args.glottolog, 'The --glottolog option is required!'
     assert args.concepticon, 'The --concepticon option is required!'
@@ -75,7 +74,7 @@ def main(args):
         id=ids.__name__,
         name="IDS",
         description="The Intercontinental Dictionary Series",
-        published=date(2023, 3, 6),
+        published=datetime.date(2023, 3, 6),
         publisher_name="Max Planck Institute for Evolutionary Anthropology",
         publisher_place="Leipzig",
         publisher_url="https://www.eva.mpg.de",
@@ -91,11 +90,10 @@ def main(args):
     DBSession.add(dataset)
     DBSession.flush()
 
-    contributors = defaultdict(list)
+    contributors = collections.defaultdict(list)
     languages = []
-    altnames = {}
     max_lang_id = -1
-    lang_id_map = defaultdict(dict)
+    lang_id_map = collections.defaultdict(dict)
 
     for ds in ids_datasets:
         rdfID = get_rdfID(ds, ds_metadata, args)
@@ -205,7 +203,7 @@ def main(args):
         c = data.add(common.Contributor, s, id=s, name=name)
         if s in EDITORS:
             c.address = EDITORS[s][1]
-        for lg, specs in groupby(sorted(roles, key=lambda r: r[2]), key=lambda r: r[2]):
+        for lg, specs in itertools.groupby(sorted(roles, key=lambda r: r[2]), key=lambda r: r[2]):
             sroles = sorted(
                 [s[1] for s in specs],
                 reverse=True,
@@ -251,7 +249,7 @@ def main(args):
 
     synsets = {}
     counterparts = {}
-    problems = defaultdict(list)
+    problems = collections.defaultdict(list)
 
     for ds in ids_datasets:
         rdfID = get_rdfID(ds, ds_metadata, args)
@@ -259,7 +257,7 @@ def main(args):
             continue
 
         for lg_id_, entries in tqdm(
-            groupby(
+            itertools.groupby(
                 sorted(ds["FormTable"], key=lambda t: t['Language_ID']),
                 lambda k: k['Language_ID']),
             desc='Loading words per dictionary in {}'.format(ds.properties.get('rdf:ID'))
@@ -271,7 +269,7 @@ def main(args):
             lg_id = lang_id_map[rdfID][lg_id_]
 
             language = common.Language.get(data['IdsLanguage'][lg_id])
-            words = defaultdict(list)
+            words = collections.defaultdict(list)
             alt_repr, desc = '', ''
             for i, e in enumerate(entries):
                 # all entries have the same sources/descriptions per lang
