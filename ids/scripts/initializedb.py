@@ -35,7 +35,7 @@ EDITORS = collections.OrderedDict([
 def main(args):
 
     # path of datasets
-    internal_repo = Path(ids.__file__).parent.parent.parent.parent / 'ids' / 'ids-internal'
+    internal_repo = Path(ids.__file__).parent.parent.parent / 'ids-internal'
 
     assert args.glottolog, 'The --glottolog option is required!'
     assert args.concepticon, 'The --concepticon option is required!'
