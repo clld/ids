@@ -31,6 +31,7 @@ setup(
         'pycldf>=1.37.0',
         'sqlalchemy>=1.4.23',
         'waitress>=1.4.4',
+        'psycopg2>=2.8.6',
     ],
     extras_require={
         'dev': [
@@ -38,7 +39,6 @@ setup(
             'tox',
         ],
         'test': [
-            'psycopg2>=2.8.6',
             'pytest>=7.4.2',
             'pytest-clld>=1.2.0',
             'pytest-mock>=3.10.0',
